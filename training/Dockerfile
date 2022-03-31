@@ -15,6 +15,8 @@ WORKDIR /opt/train
 
 ENV PATH="/home/train/.local/bin:${PATH}"
 
+
+
 RUN python -m pip install --user -U pip
 
 
@@ -29,6 +31,10 @@ COPY --chown=train:train metrics.py /opt/train/
 COPY --chown=train:train train.py /opt/train/
 COPY --chown=train:train algorithm/ /opt/train/algorithm/
 COPY --chown=train:train config/ /opt/train/config/
+
+ENV nnUNet_raw_data_base="/input/"
+ENV nnUNet_preprocessed="/home/preprocessed"
+ENV RESULTS_FOLDER="/output/trained_models"
 
 ENTRYPOINT python -m main $0 $@
 

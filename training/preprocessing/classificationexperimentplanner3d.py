@@ -4,6 +4,30 @@ from copy import deepcopy
 
 
 class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
+
+    def get_properties_for_stage(self, current_spacing, original_spacing, original_shape, num_cases,
+                                 num_modalities, num_classes):
+
+        new_max_shape = np.round(original_spacing / current_spacing * original_shape).astype(int) # does nothing since original_spacing and current_spacing are the same
+
+        #TODO implement smart way to find image size and batch size by seeing what fits in GPU memory
+        image_size = new_max_shape
+        batch_size = 2
+
+        do_dummy_2D_data_aug = (max(image_size) / image_size[
+            0]) > self.anisotropy_threshold
+
+        plan = {
+            'batch_size': batch_size,
+            'image_size': image_size,
+            'max_patient_size_in_voxels': image_size,
+            'current_spacing': current_spacing,
+            'original_spacing': original_spacing,
+            'do_dummy_2D_data_aug': do_dummy_2D_data_aug,
+        }
+        return plan
+
+
     def plan_experiment(self):
         use_nonzero_mask_for_normalization = self.determine_whether_to_use_mask_for_norm()
         print("Are we using the nonzero mask for normalizaion?", use_nonzero_mask_for_normalization)
@@ -31,18 +55,19 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
         min_shape = np.min(np.vstack(new_shapes), 0)
         print("the min shape in the dataset is ", min_shape)
 
-        print("we don't want feature maps smaller than ", self.unet_featuremap_min_edge_length, " in the bottleneck")
-
         # how many stages will the image pyramid have?
         self.plans_per_stage = list()
 
         target_spacing_transposed = np.array(target_spacing)[self.transpose_forward]
-        median_shape_transposed = np.array(median_shape)[self.transpose_forward]
-        print("the transposed median shape of the dataset is ", median_shape_transposed)
+        #median_shape_transposed = np.array(median_shape)[self.transpose_forward]
+        # We instead want to use max shape here for classification:
+        max_shape_transposed = np.array(max_shape)[self.transpose_forward]
+        print("the transposed max shape of the dataset is ", max_shape_transposed)
 
         print("generating configuration for 3d_fullres")
+        # current_spacing and original_spacing are the same here
         self.plans_per_stage.append(self.get_properties_for_stage(target_spacing_transposed, target_spacing_transposed,
-                                                                  median_shape_transposed,
+                                                                  max_shape_transposed,
                                                                   len(self.list_of_cropped_npz_files),
                                                                   num_modalities, len(all_classes) + 1))
 
@@ -97,8 +122,6 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
         print("transpose backward", self.transpose_backward)
 
         normalization_schemes = self.determine_normalization_scheme()
-        only_keep_largest_connected_component, min_size_per_class, min_region_size_per_class = None, None, None
-        # removed training data based postprocessing. This is deprecated
 
         # these are independent of the stage
         plans = {'num_stages': len(list(self.plans_per_stage.keys())), 'num_modalities': num_modalities,
@@ -106,14 +129,11 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
                  'dataset_properties': self.dataset_properties, 'list_of_npz_files': self.list_of_cropped_npz_files,
                  'original_spacings': spacings, 'original_sizes': sizes,
                  'preprocessed_data_folder': self.preprocessed_output_folder, 'num_classes': len(all_classes),
-                 'all_classes': all_classes, 'base_num_features': self.unet_base_num_features,
+                 'all_classes': all_classes,
                  'use_mask_for_norm': use_nonzero_mask_for_normalization,
-                 'keep_only_largest_region': only_keep_largest_connected_component,
-                 'min_region_size_per_class': min_region_size_per_class, 'min_size_per_class': min_size_per_class,
                  'transpose_forward': self.transpose_forward, 'transpose_backward': self.transpose_backward,
                  'data_identifier': self.data_identifier, 'plans_per_stage': self.plans_per_stage,
                  'preprocessor_name': self.preprocessor_name,
-                 'conv_per_stage': self.conv_per_stage,
                  }
 
         self.plans = plans
