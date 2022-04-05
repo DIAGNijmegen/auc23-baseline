@@ -15,25 +15,50 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
     def __init__(self, folder_with_cropped_data, preprocessed_output_folder):
         super().__init__(folder_with_cropped_data, preprocessed_output_folder)
         self.data_identifier = "universal_classifier_plans_v1.0"
+        self.plans_fname = join(self.preprocessed_output_folder, "UniversalClassifierPlans" + "fixed_plans_3D.pkl")
         self.preprocessor_name = "UniversalClassifierPreprocessor"
+        self.max_shape_limit = [240, 240, 240]  # hard coded for now
+        self.minimum_batch_size = 2  # Works for I3dr model with 240^3 img size
 
-
-    def get_properties_for_stage(self, current_spacing, original_spacing, original_shape, num_cases,
-                                 num_modalities, num_classes):
-        new_max_shape = np.round(original_spacing / current_spacing * original_shape).astype(
-            int)  # does nothing since original_spacing and current_spacing are the same
-
+    def get_properties_for_stage(self, original_spacing, max_shape):
         # TODO implement smart way to find image size and batch size by seeing what fits in GPU memory
-        image_size = new_max_shape
-        batch_size = 2
 
-        do_dummy_2D_data_aug = (max(image_size) / image_size[
+        # TODO: work out how memory scales with image size. Naively assuming the same nr of voxels results in the same
+        #  memory consumption now
+        voxels = np.product(max_shape)
+        voxels_limit = np.product(self.max_shape_limit)
+        ratio = np.cbrt(voxels_limit / voxels)  # cube root because of scaling in each dimension
+
+        print(original_spacing, max_shape)
+        print(ratio)
+        if ratio < 1:  # so voxels_limit < voxels
+            max_shape = [np.ceil(s*ratio) for s in max_shape]
+            print(max_shape)
+            current_spacing = [s/ratio for s in original_spacing]
+            print(max_shape)
+            voxels = np.product(max_shape)
+            ratio = voxels_limit / voxels
+        else:
+            current_spacing = original_spacing
+
+        # TODO: work out how memory scales with image size. Naively scale batchsize by fraction of voxels wrt an image
+        #  with a size of max_shape_limit for now. May not work.
+        batch_size = np.max([
+            self.minimum_batch_size,
+            np.floor(self.minimum_batch_size * ratio)
+        ])
+        print(batch_size)
+        print(batch_size)
+        print(batch_size)
+        print(batch_size)
+        print(batch_size)
+
+        do_dummy_2D_data_aug = (max(max_shape) / max_shape[
             0]) > self.anisotropy_threshold
 
         plan = {
             'batch_size': batch_size,
-            'image_size': image_size,
-            'max_patient_size_in_voxels': image_size,
+            'image_size': max_shape,
             'current_spacing': current_spacing,
             'original_spacing': original_spacing,
             'do_dummy_2D_data_aug': do_dummy_2D_data_aug,
@@ -79,54 +104,15 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
 
         print("generating configuration for 3d_fullres")
         # current_spacing and original_spacing are the same here
-        self.plans_per_stage.append(self.get_properties_for_stage(target_spacing_transposed, target_spacing_transposed,
-                                                                  max_shape_transposed,
-                                                                  len(self.list_of_cropped_npz_files),
-                                                                  num_modalities, len(all_classes) + 1))
+        self.plans_per_stage.append(self.get_properties_for_stage(target_spacing_transposed,
+                                                                  max_shape_transposed))
 
         # thanks Zakiyi (https://github.com/MIC-DKFZ/nnUNet/issues/61) for spotting this bug :-)
         # if np.prod(self.plans_per_stage[-1]['median_patient_size_in_voxels'], dtype=np.int64) / \
         #        architecture_input_voxels < HOW_MUCH_OF_A_PATIENT_MUST_THE_NETWORK_SEE_AT_STAGE0:
 
-        # Only allowing one stage for classifier:
-        """
-        architecture_input_voxels_here = np.prod(self.plans_per_stage[-1]['patch_size'], dtype=np.int64)
-        if np.prod(median_shape) / architecture_input_voxels_here < \
-                self.how_much_of_a_patient_must_the_network_see_at_stage0:
-            more = False
-        else:
-            more = True
+        # Removed code here, because only allowing one stage for classifier.
 
-        if more:
-            print("generating configuration for 3d_lowres")
-            # if we are doing more than one stage then we want the lowest stage to have exactly
-            # HOW_MUCH_OF_A_PATIENT_MUST_THE_NETWORK_SEE_AT_STAGE0 (this is 4 by default so the number of voxels in the
-            # median shape of the lowest stage must be 4 times as much as the network can process at once (128x128x128 by
-            # default). Problem is that we are downsampling higher resolution axes before we start downsampling the
-            # out-of-plane axis. We could probably/maybe do this analytically but I am lazy, so here
-            # we do it the dumb way
-
-            lowres_stage_spacing = deepcopy(target_spacing)
-            num_voxels = np.prod(median_shape, dtype=np.float64)
-            while num_voxels > self.how_much_of_a_patient_must_the_network_see_at_stage0 * architecture_input_voxels_here:
-                max_spacing = max(lowres_stage_spacing)
-                if np.any((max_spacing / lowres_stage_spacing) > 2):
-                    lowres_stage_spacing[(max_spacing / lowres_stage_spacing) > 2] \
-                        *= 1.01
-                else:
-                    lowres_stage_spacing *= 1.01
-                num_voxels = np.prod(target_spacing / lowres_stage_spacing * median_shape, dtype=np.float64)
-
-                lowres_stage_spacing_transposed = np.array(lowres_stage_spacing)[self.transpose_forward]
-                new = self.get_properties_for_stage(lowres_stage_spacing_transposed, target_spacing_transposed,
-                                                    median_shape_transposed,
-                                                    len(self.list_of_cropped_npz_files),
-                                                    num_modalities, len(all_classes) + 1)
-                architecture_input_voxels_here = np.prod(new['patch_size'], dtype=np.int64)
-            if 2 * np.prod(new['median_patient_size_in_voxels'], dtype=np.int64) < np.prod(
-                    self.plans_per_stage[0]['median_patient_size_in_voxels'], dtype=np.int64):
-                self.plans_per_stage.append(new)
-        """
         self.plans_per_stage = self.plans_per_stage[::-1]
         self.plans_per_stage = {i: self.plans_per_stage[i] for i in range(len(self.plans_per_stage))}  # convert to dict
 
@@ -171,9 +157,10 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
                                          self.transpose_forward,
                                           intensityproperties)
         target_spacings = [i["current_spacing"] for i in self.plans_per_stage.values()]
+        target_sizes = [i["image_size"] for i in self.plans_per_stage.values()]
         if self.plans['num_stages'] > 1 and not isinstance(num_threads, (list, tuple)):
             num_threads = (default_num_threads, num_threads)
         elif self.plans['num_stages'] == 1 and isinstance(num_threads, (list, tuple)):
             num_threads = num_threads[-1]
-        preprocessor.run(target_spacings, self.folder_with_cropped_data, self.preprocessed_output_folder,
+        preprocessor.run(target_spacings, target_sizes, self.folder_with_cropped_data, self.preprocessed_output_folder,
                          self.plans['data_identifier'], num_threads)
