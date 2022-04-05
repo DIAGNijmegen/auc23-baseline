@@ -8,12 +8,12 @@ from fastai.callback.all import *
 from fastai.metrics import AccumMetric
 
 from algorithm.i3d.i3dpt import I3D
-from ctdataset import CTDataset
-from config import get_config
-from metrics import acc_probseverecovid
-from metrics import acc_probcovid
-from metrics import roc_probseverecovid
-from metrics import roc_probcovid
+from universalclassifier.ctdataset import CTDataset
+from universalclassifier.config import get_config
+from universalclassifier.metrics import acc_probseverecovid
+from universalclassifier.metrics import acc_probcovid
+from universalclassifier.metrics import roc_probseverecovid
+from universalclassifier.metrics import roc_probcovid
 
 import torch
 if torch.cuda.is_available():

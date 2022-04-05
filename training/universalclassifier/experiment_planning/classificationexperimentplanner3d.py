@@ -1,16 +1,29 @@
+
+import shutil
+
+import nnunet
+from batchgenerators.utilities.file_and_folder_operations import *
+
+from nnunet.configuration import default_num_threads
+from nnunet.training.model_restore import recursive_find_python_class
 from nnunet.experiment_planning.experiment_planner_baseline_3DUNet_v21 import ExperimentPlanner3D_v21
 import numpy as np
-from copy import deepcopy
 
+import universalclassifier
 
 class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
+    def __init__(self, folder_with_cropped_data, preprocessed_output_folder):
+        super().__init__(folder_with_cropped_data, preprocessed_output_folder)
+        self.data_identifier = "universal_classifier_plans_v1.0"
+        self.preprocessor_name = "UniversalClassifierPreprocessor"
+
 
     def get_properties_for_stage(self, current_spacing, original_spacing, original_shape, num_cases,
                                  num_modalities, num_classes):
+        new_max_shape = np.round(original_spacing / current_spacing * original_shape).astype(
+            int)  # does nothing since original_spacing and current_spacing are the same
 
-        new_max_shape = np.round(original_spacing / current_spacing * original_shape).astype(int) # does nothing since original_spacing and current_spacing are the same
-
-        #TODO implement smart way to find image size and batch size by seeing what fits in GPU memory
+        # TODO implement smart way to find image size and batch size by seeing what fits in GPU memory
         image_size = new_max_shape
         batch_size = 2
 
@@ -27,7 +40,6 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
         }
         return plan
 
-
     def plan_experiment(self):
         use_nonzero_mask_for_normalization = self.determine_whether_to_use_mask_for_norm()
         print("Are we using the nonzero mask for normalizaion?", use_nonzero_mask_for_normalization)
@@ -35,6 +47,7 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
         sizes = self.dataset_properties['all_sizes']
 
         all_classes = self.dataset_properties['all_classes']
+        #all_classification_classes = self.dataset_properties['all_classification_classes']
         modalities = self.dataset_properties['modalities']
         num_modalities = len(list(modalities.keys()))
 
@@ -59,7 +72,7 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
         self.plans_per_stage = list()
 
         target_spacing_transposed = np.array(target_spacing)[self.transpose_forward]
-        #median_shape_transposed = np.array(median_shape)[self.transpose_forward]
+        # median_shape_transposed = np.array(median_shape)[self.transpose_forward]
         # We instead want to use max shape here for classification:
         max_shape_transposed = np.array(max_shape)[self.transpose_forward]
         print("the transposed max shape of the dataset is ", max_shape_transposed)
@@ -128,8 +141,11 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
                  'modalities': modalities, 'normalization_schemes': normalization_schemes,
                  'dataset_properties': self.dataset_properties, 'list_of_npz_files': self.list_of_cropped_npz_files,
                  'original_spacings': spacings, 'original_sizes': sizes,
-                 'preprocessed_data_folder': self.preprocessed_output_folder, 'num_classes': len(all_classes),
+                 'preprocessed_data_folder': self.preprocessed_output_folder,
+                 'num_classes': len(all_classes),
                  'all_classes': all_classes,
+                 #'num_classification_classes': len(all_classification_classes),
+                 #'all_classification_classes': all_classification_classes,
                  'use_mask_for_norm': use_nonzero_mask_for_normalization,
                  'transpose_forward': self.transpose_forward, 'transpose_backward': self.transpose_backward,
                  'data_identifier': self.data_identifier, 'plans_per_stage': self.plans_per_stage,
@@ -138,3 +154,26 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
 
         self.plans = plans
         self.save_my_plans()
+
+    def run_preprocessing(self, num_threads):
+        if os.path.isdir(join(self.preprocessed_output_folder, "gt_segmentations")):
+            shutil.rmtree(join(self.preprocessed_output_folder, "gt_segmentations"))
+        shutil.copytree(join(self.folder_with_cropped_data, "gt_segmentations"),
+                        join(self.preprocessed_output_folder, "gt_segmentations"))
+        normalization_schemes = self.plans['normalization_schemes']
+        use_nonzero_mask_for_normalization = self.plans['use_mask_for_norm']
+        intensityproperties = self.plans['dataset_properties']['intensityproperties']
+        preprocessor_class = recursive_find_python_class([join(universalclassifier.__path__[0], "preprocessing")],
+                                                         self.preprocessor_name,
+                                                         current_module="universalclassifier.preprocessing")
+        assert preprocessor_class is not None
+        preprocessor = preprocessor_class(normalization_schemes, use_nonzero_mask_for_normalization,
+                                         self.transpose_forward,
+                                          intensityproperties)
+        target_spacings = [i["current_spacing"] for i in self.plans_per_stage.values()]
+        if self.plans['num_stages'] > 1 and not isinstance(num_threads, (list, tuple)):
+            num_threads = (default_num_threads, num_threads)
+        elif self.plans['num_stages'] == 1 and isinstance(num_threads, (list, tuple)):
+            num_threads = num_threads[-1]
+        preprocessor.run(target_spacings, self.folder_with_cropped_data, self.preprocessed_output_folder,
+                         self.plans['data_identifier'], num_threads)

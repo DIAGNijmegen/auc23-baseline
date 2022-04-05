@@ -1,5 +1,6 @@
 import shutil
-import plan_and_preprocess
+from universalclassifier.experiment_planning import plan_and_preprocess
+#from universalclassifier.train import do_learning
 
 DATA_DIR = "/input/"
 ARTIFACT_DIR = "/output/"
@@ -10,7 +11,6 @@ if __name__ == "__main__":
     plan_and_preprocess.main()
     print("Done processing")
     quit()
-    from train import do_learning
     artifacts = do_learning(DATA_DIR, ARTIFACT_DIR)
 
     # When the learning has completed, any artifacts should have been saved to ARTIFACT_DIR.
