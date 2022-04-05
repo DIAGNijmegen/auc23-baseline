@@ -44,8 +44,7 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
             np.floor(self.minimum_batch_size * ratio)
         ])
 
-        do_dummy_2D_data_aug = (max(max_shape) / max_shape[
-            0]) > self.anisotropy_threshold
+        do_dummy_2D_data_aug = (max(max_shape) / max_shape[0]) > self.anisotropy_threshold
 
         plan = {
             'batch_size': batch_size,
