@@ -28,7 +28,7 @@ from nnunet.training.model_restore import recursive_find_python_class
 from nnunet.paths import *
 
 from universalclassifier.preprocessing import utils
-from universalclassifier.experiment_planning.mydatasetanalyzer import ClassificationDatasetAnalyzer as DatasetAnalyzer
+from universalclassifier.experiment_planning.classificationdatasetanalyzer import ClassificationDatasetAnalyzer
 import universalclassifier
 import nnunet
 
@@ -157,7 +157,7 @@ def main():
         dataset_json = load_json(join(cropped_out_dir, 'dataset.json'))
         modalities = list(dataset_json["modality"].values())
         collect_intensityproperties = True if (("CT" in modalities) or ("ct" in modalities)) else False
-        dataset_analyzer = DatasetAnalyzer(cropped_out_dir, overwrite=False, num_processes=tf)  # this class creates the fingerprint
+        dataset_analyzer = ClassificationDatasetAnalyzer(cropped_out_dir, overwrite=False, num_processes=tf)  # this class creates the fingerprint
         print("Analyzing data...")
         _ = dataset_analyzer.analyze_dataset(collect_intensityproperties)  # this will write output files that will be used by the ExperimentPlanner
 
