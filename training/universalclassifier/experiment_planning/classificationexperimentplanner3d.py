@@ -29,13 +29,9 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
         voxels_limit = np.product(self.max_shape_limit)
         ratio = np.cbrt(voxels_limit / voxels)  # cube root because of scaling in each dimension
 
-        print(original_spacing, max_shape)
-        print(ratio)
         if ratio < 1:  # so voxels_limit < voxels
             max_shape = [np.ceil(s*ratio) for s in max_shape]
-            print(max_shape)
             current_spacing = [s/ratio for s in original_spacing]
-            print(max_shape)
             voxels = np.product(max_shape)
             ratio = voxels_limit / voxels
         else:
@@ -47,11 +43,6 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
             self.minimum_batch_size,
             np.floor(self.minimum_batch_size * ratio)
         ])
-        print(batch_size)
-        print(batch_size)
-        print(batch_size)
-        print(batch_size)
-        print(batch_size)
 
         do_dummy_2D_data_aug = (max(max_shape) / max_shape[
             0]) > self.anisotropy_threshold
