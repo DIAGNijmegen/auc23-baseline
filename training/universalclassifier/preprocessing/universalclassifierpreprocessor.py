@@ -58,24 +58,9 @@ class UniversalClassifierPreprocessor(GenericPreprocessor):
         data = data.transpose((0, *[i + 1 for i in self.transpose_forward]))
         seg = seg.transpose((0, *[i + 1 for i in self.transpose_forward]))
 
-        # This stuff here seems very incorrect:
-
-        print("maxdimen:", target_size)
-        print("tgtspcng:", target_spacing)
-        # maxdimen: [426.875, 499.999755859375, 499.999755859375]
-        # tgtspcng: [0.74218798 0.625      0.74218798]
-        # maxshape: [575.1575252123218, 799.999609375, 673.683448753952]
-        print(self.transpose_forward)
-        # [1, 0, 2]
-
         data, seg, properties = self.resample_and_normalize(data, target_spacing,
                                                             properties, seg, force_separate_z)
-        print("HIER")
-        print()
-        print(data.shape)
-        print(seg.shape)
-        print(properties)
-        print()
+
         #add padding so that all images have the same size
 
         all_data = np.vstack((data, seg)).astype(np.float32)
