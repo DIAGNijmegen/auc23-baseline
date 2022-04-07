@@ -1,16 +1,13 @@
 import shutil
-from universalclassifier.experiment_planning import plan_and_preprocess
-#from universalclassifier.train import do_learning
+from universalclassifier.train import do_learning
 
 DATA_DIR = "/input/"
 ARTIFACT_DIR = "/output/"
 
-if __name__ == "__main__":
+
+def main():
     # Substitute do_learning for your training function.
     # It is recommended to write artifacts (e.g. model weights) to ARTIFACT_DIR during training.
-    plan_and_preprocess.main()
-    print("Done processing")
-    quit()
     artifacts = do_learning(DATA_DIR, ARTIFACT_DIR)
 
     # When the learning has completed, any artifacts should have been saved to ARTIFACT_DIR.
@@ -19,3 +16,7 @@ if __name__ == "__main__":
         shutil.copy(artifact, ARTIFACT_DIR)
 
     print("Training completed.")
+
+
+if __name__ == "__main__":
+    main()

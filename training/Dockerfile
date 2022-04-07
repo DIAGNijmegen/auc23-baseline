@@ -24,13 +24,9 @@ RUN python -m pip install --user -U pip
 COPY --chown=train:train requirements.txt /opt/train/
 RUN python -m pip install --user -r requirements.txt
 
-COPY --chown=train:train universalclassifier/config.py /opt/train/
-COPY --chown=train:train universalclassifier/ctdataset.py /opt/train/
+COPY --chown=train:train universalclassifier/ /opt/train/universalclassifier
+COPY --chown=train:train train.py /opt/train/
 COPY --chown=train:train main.py /opt/train/
-COPY --chown=train:train universalclassifier/metrics.py /opt/train/
-COPY --chown=train:train universalclassifier/train.py /opt/train/
-COPY --chown=train:train algorithm/ /opt/train/algorithm/
-COPY --chown=train:train universalclassifier/config/ /opt/train/config/
 
 ENV nnUNet_raw_data_base="/input/"
 ENV nnUNet_preprocessed="/home/preprocessed"
