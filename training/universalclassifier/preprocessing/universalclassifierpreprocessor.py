@@ -6,6 +6,52 @@ from multiprocessing.pool import Pool
 from nnunet.preprocessing.preprocessing import GenericPreprocessor
 
 
+def central_pad_data_or_seg(np_image, target_size, outside_val=0):
+    target_size = np.asarray([np_image.shape[0]] + list(target_size), dtype=np.int)
+
+    assert len(np_image.shape) == 4, "data must be (c, x, y, z)"
+    assert all([s1 <= s2 for s1, s2 in zip(np_image.shape, target_size)]) # only padding, no cropping
+
+    output_image = np.full(target_size, outside_val, np_image.dtype)
+
+    offsets = tuple()
+    for it, sh in enumerate(target_size):
+        if it == 0:
+            offset = slice(None)  # Keep all channels
+        else:
+            # computing offset to pad
+            start = (sh // 2) - (np_image.shape[it] // 2)
+            offset = slice(start, start + np_image.shape[it])
+
+        offsets += (offset,)
+
+    output_image[offsets] = np_image
+    return output_image
+
+
+def central_pad(data, target_size, properties, seg):
+    assert not ((data is None) and (seg is None))
+    if data is not None:
+        assert len(data.shape) == 4, "data must be c x y z"
+    if seg is not None:
+        assert len(seg.shape) == 4, "seg must be c x y z"
+
+    if data is not None:
+        shape = np.array(data[0].shape)
+    else:
+        shape = np.array(seg[0].shape)
+
+
+    print(f"Applying uniform padding from {shape} to {target_size}...")
+    if data is not None:
+        data = central_pad_data_or_seg(data, target_size)
+    if data is not None:
+        seg = central_pad_data_or_seg(seg, target_size)
+
+    properties['size after central pad'] = target_size
+    return data, seg, properties
+
+
 class UniversalClassifierPreprocessor(GenericPreprocessor):
 
     # only changed all_classes to max_dimensions
@@ -62,60 +108,9 @@ class UniversalClassifierPreprocessor(GenericPreprocessor):
                                                             properties, seg, force_separate_z)
 
         #add padding so that all images have the same size
-        data, seg, properties = self.central_pad(data, target_size, properties, seg)
+        data, seg, properties = central_pad(data, target_size, properties, seg)
 
         all_data = np.vstack((data, seg)).astype(np.float32)
         print("saving: ", os.path.join(output_folder_stage, "%s.npz" % case_identifier))
         np.savez_compressed(os.path.join(output_folder_stage, "%s.npz" % case_identifier),
                             data=all_data.astype(np.float32))
-
-    def central_pad(self, data, target_size, properties, seg):
-        assert not ((data is None) and (seg is None))
-        if data is not None:
-            assert len(data.shape) == 4, "data must be c x y z"
-        if seg is not None:
-            assert len(seg.shape) == 4, "seg must be c x y z"
-
-        if data is not None:
-            shape = np.array(data[0].shape)
-        else:
-            shape = np.array(seg[0].shape)
-
-
-        print(f"Applying uniform padding from {shape} to {target_size}...")
-        if data is not None:
-            data = self.central_pad_data_or_seg(data, target_size)
-        if data is not None:
-            seg = self.central_pad_data_or_seg(seg, target_size)
-
-        properties['size after central pad'] = target_size
-        return data, seg, properties
-
-    def central_pad_data_or_seg(self, np_image, target_size, outside_val=0):
-        target_size = np.asarray([np_image.shape[0]] + list(target_size), dtype=np.int)
-
-        assert len(np_image.shape) == 4, "data must be (c, x, y, z)"
-        assert all([s1 <= s2 for s1, s2 in zip(np_image.shape, target_size)]) # only padding, no cropping
-
-        output_image = np.full(target_size, outside_val, np_image.dtype)
-
-        offsets = tuple()
-        for it, sh in enumerate(target_size):
-            if it == 0:
-                offset = slice(None)  # Keep all channels
-            else:
-                size = sh // 2
-                center = (np_image.shape[it] // 2)
-
-                start = center - size
-
-                # computing offset to pad if the crop is partly outside of the scan
-                offset = slice(-min(0, start), 2 * size - max(0, (start + 2 * size) - np_image.shape[it]))
-            offsets += (offset,)
-
-        print("end of central pad:")
-        from pprint import pprint
-        pprint(offsets)
-        print(target_size)
-        output_image[offsets] = np_image
-        return output_image

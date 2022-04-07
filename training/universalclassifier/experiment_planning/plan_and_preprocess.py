@@ -147,7 +147,6 @@ def main():
                               current_module="nnunet.experiment_planning")
 
     for t in tasks:
-        print("\n\n\n", t)
         cropped_out_dir = os.path.join(nnUNet_cropped_data, t)
         preprocessing_output_dir_this_task = os.path.join(preprocessing_output_dir, t)
         #splitted_4d_output_dir_task = os.path.join(nnUNet_raw_data, t)
