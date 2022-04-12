@@ -114,3 +114,5 @@ class UniversalClassifierPreprocessor(GenericPreprocessor):
         print("saving: ", os.path.join(output_folder_stage, "%s.npz" % case_identifier))
         np.savez_compressed(os.path.join(output_folder_stage, "%s.npz" % case_identifier),
                             data=all_data.astype(np.float32))
+        with open(os.path.join(output_folder_stage, "%s.pkl" % case_identifier), 'wb') as f:
+            pickle.dump(properties, f)
