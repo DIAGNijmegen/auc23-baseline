@@ -15,6 +15,9 @@ class ClassificationDatasetAnalyzer(DatasetAnalyzer):
         classes = self.get_classes()
         all_classes = [int(i) for i in classes.keys() if int(i) > 0]
 
+        classification_labels = self.get_classification_labels()
+        all_classification_labels = [[int(i) for i in label["values"].keys()] for label in classification_labels]
+
         # modalities
         modalities = self.get_modalities()
 
@@ -32,6 +35,7 @@ class ClassificationDatasetAnalyzer(DatasetAnalyzer):
         dataset_properties['all_sizes'] = sizes
         dataset_properties['all_spacings'] = spacings
         dataset_properties['all_classes'] = all_classes
+        dataset_properties['all_classification_labels'] = all_classification_labels
         dataset_properties['modalities'] = modalities  # {idx: modality name}
         dataset_properties['intensityproperties'] = intensityproperties
         dataset_properties['size_reductions'] = size_reductions  # {patient_id: size_reduction}
@@ -41,3 +45,7 @@ class ClassificationDatasetAnalyzer(DatasetAnalyzer):
 
         save_pickle(dataset_properties, join(self.folder_with_cropped_data, "dataset_properties.pkl"))
         return dataset_properties
+
+    def get_classification_labels(self):
+        datasetjson = load_json(join(self.folder_with_cropped_data, "dataset.json"))
+        return datasetjson['classification_labels']

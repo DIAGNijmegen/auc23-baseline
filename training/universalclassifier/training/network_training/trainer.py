@@ -1,12 +1,34 @@
 # Copied and edited from https://github.com/MIC-DKFZ/nnUNet/blob/8e0ad8ebe0b24165419d087d4451b4631f5b37f2/nnunet/training/network_training/nnUNetTrainer.py#L432
 
+from collections import OrderedDict
+
+from nnunet.training.loss_functions.deep_supervision import MultipleOutputLoss2
 from nnunet.training.network_training.network_trainer import NetworkTrainer
 from batchgenerators.utilities.file_and_folder_operations import *
-from nnunet.training.dataloading.dataset_loading import load_dataset, unpack_dataset
-from nnunet.training.data_augmentation.default_data_augmentation import default_3D_augmentation_params, \
-    default_2D_augmentation_params, get_default_augmentation
-import numpy as np
+from nnunet.training.dataloading.dataset_loading import unpack_dataset
+from universalclassifier.training.data_augmentation.data_augmentation import get_moreDA_augmentation
+from nnunet.training.data_augmentation.default_data_augmentation import default_2D_augmentation_params, \
+    default_3D_augmentation_params
 
+from nnunet.utilities.nd_softmax import softmax_helper
+from nnunet.utilities.to_torch import maybe_to_torch, to_cuda
+
+import numpy as np
+import torch
+from torch.nn import BCEWithLogitsLoss
+from torch.cuda.amp import autocast
+
+from sklearn.model_selection import KFold
+from nnunet.training.learning_rate.poly_lr import poly_lr
+
+from universalclassifier.network_architecture.i3d.i3dpt import I3D
+from universalclassifier.training.dataloading.dataset_loading import load_dataset
+from universalclassifier.training.dataloading.data_loading import DataLoader3D
+
+from multiprocessing import Pool
+from nnunet.configuration import default_num_threads
+
+from typing import Tuple, List
 
 class ClassifierTrainer(NetworkTrainer):
 
@@ -39,9 +61,11 @@ class ClassifierTrainer(NetworkTrainer):
         # set in self.initialize()
 
         self.dl_tr = self.dl_val = None
-        self.num_input_channels = self.num_classes = self.batch_size = self.threeD = self.intensity_properties = \
-            self.normalization_schemes = self.image_size = None  # loaded automatically from plans_file
+        self.num_input_channels = self.num_classes = self.num_classification_classes = self.batch_size = self.threeD = \
+            self.intensity_properties = self.normalization_schemes = self.image_size = None  # loaded automatically from plans_file
         self.data_aug_params = self.transpose_forward = self.transpose_backward = None
+
+        self.loss = BCEWithLogitsLoss()
 
         self.classes = self.do_dummy_2D_aug = self.use_mask_for_norm = None
 
@@ -49,8 +73,13 @@ class ClassifierTrainer(NetworkTrainer):
 
         self.lr_scheduler_eps = 1e-3
         self.lr_scheduler_patience = 30
-        self.initial_lr = 3e-4
         self.weight_decay = 3e-5
+
+        self.max_num_epochs = 1000
+        self.initial_lr = 1e-2
+
+        self.pin_memory = True
+
 
     def update_fold(self, fold):
         """
@@ -89,11 +118,12 @@ class ClassifierTrainer(NetworkTrainer):
         self.process_plans(self.plans)
         self.setup_DA_params()
 
+        self.loss = MultipleOutputLoss2(self.loss, weight_factors=None)
+
         if training:
             self.folder_with_preprocessed_data = join(self.dataset_directory, self.plans['data_identifier'] +
                                                       "_stage%d" % self.stage)
 
-            #### hier ben ik ####
             self.dl_tr, self.dl_val = self.get_basic_generators()
             if self.unpack_data:
                 self.print_to_log_file("unpacking dataset")
@@ -103,16 +133,22 @@ class ClassifierTrainer(NetworkTrainer):
                 self.print_to_log_file(
                     "INFO: Not unpacking data! Training may be slow due to that. Pray you are not using 2d or you "
                     "will wait all winter for your model to finish!")
-            self.tr_gen, self.val_gen = get_default_augmentation(self.dl_tr, self.dl_val,
-                                                                 self.data_aug_params[
-                                                                     'patch_size_for_spatialtransform'],
-                                                                 self.data_aug_params)
+
+            self.tr_gen, self.val_gen = get_moreDA_augmentation(
+                self.dl_tr, self.dl_val,
+                self.data_aug_params[
+                    'image_size_for_spatialtransform'],
+                self.data_aug_params,
+                pin_memory=self.pin_memory,
+                use_nondetMultiThreadedAugmenter=False
+            )
             self.print_to_log_file("TRAINING KEYS:\n %s" % (str(self.dataset_tr.keys())),
                                    also_print_to_console=False)
             self.print_to_log_file("VALIDATION KEYS:\n %s" % (str(self.dataset_val.keys())),
                                    also_print_to_console=False)
         else:
             pass
+
         self.initialize_network()
         self.initialize_optimizer_and_scheduler()
         # assert isinstance(self.network, (SegmentationNetwork, nn.DataParallel))
@@ -133,7 +169,9 @@ class ClassifierTrainer(NetworkTrainer):
         self.intensity_properties = plans['dataset_properties']['intensityproperties']
         self.normalization_schemes = plans['normalization_schemes']
         self.num_input_channels = plans['num_modalities']
-        self.num_classes = plans['num_classes'] + 1  # background is no longer in num_classes
+        self.num_classes = plans['num_classes'] + 1
+        self.num_classification_classes = plans['num_classification_classes']
+        self.num_input_channels = plans['num_modalities']
         self.classes = plans['all_classes']
         self.use_mask_for_norm = plans['use_mask_for_norm']
 
@@ -146,7 +184,7 @@ class ClassifierTrainer(NetworkTrainer):
         self.transpose_forward = plans['transpose_forward']
         self.transpose_backward = plans['transpose_backward']
 
-        self.image_size = plans['max_dimensions']  ## added
+        self.image_size = plans['size after central pad']  ## added
 
     def setup_DA_params(self):
         if self.threeD:
@@ -167,22 +205,21 @@ class ClassifierTrainer(NetworkTrainer):
         self.data_aug_params["mask_was_used_for_normalization"] = self.use_mask_for_norm
 
         self.data_aug_params['selected_seg_channels'] = [0]
-        self.data_aug_params['patch_size_for_spatialtransform'] = self.image_size
+        self.data_aug_params['image_size_for_spatialtransform'] = self.image_size
+
+        # added:
+        self.data_aug_params['num_seg_classes'] = self.num_classes
 
     def load_dataset(self):
-        self.dataset = load_dataset(self.folder_with_preprocessed_data)
+        self.dataset = load_dataset(self.folder_with_preprocessed_data, self.dataset_directory, "training")
 
     def get_basic_generators(self):
         self.load_dataset()
         self.do_split()
 
         if self.threeD:
-            dl_tr = DataLoader3D(self.dataset_tr, self.basic_generator_patch_size, self.patch_size, self.batch_size,
-                                 False, oversample_foreground_percent=self.oversample_foreground_percent,
-                                 pad_mode="constant", pad_sides=self.pad_all_sides, memmap_mode='r')
-            dl_val = DataLoader3D(self.dataset_val, self.patch_size, self.patch_size, self.batch_size, False,
-                                  oversample_foreground_percent=self.oversample_foreground_percent,
-                                  pad_mode="constant", pad_sides=self.pad_all_sides, memmap_mode='r')
+            dl_tr = DataLoader3D(self.dataset_tr, self.image_size, self.batch_size, memmap_mode='r')
+            dl_val = DataLoader3D(self.dataset_val, self.image_size, self.batch_size, memmap_mode='r')
         else:
             raise RuntimeError("2D dataloader not implemented.")
         return dl_tr, dl_val
@@ -195,40 +232,277 @@ class ClassifierTrainer(NetworkTrainer):
         self.plans = load_pickle(self.plans_file)
 
     def initialize_network(self):
-        """
-        initialize self.network here
-        :return:
-        """
-        pass
+        if not self.threeD:
+            raise RuntimeError("2D network not implemented")
+
+        self.network = I3D(self.num_input_channels, self.num_classification_classes)
+
+        if torch.cuda.is_available():
+            self.network.cuda()
 
     def initialize_optimizer_and_scheduler(self):
+        assert self.network is not None, "self.initialize_network must be called first"
+        self.optimizer = torch.optim.SGD(self.network.parameters(), self.initial_lr, weight_decay=self.weight_decay,
+                                         momentum=0.99, nesterov=True)
+        self.lr_scheduler = None
+
+    def validate(self, save_softmax: bool = True, overwrite: bool = True,
+                 validation_folder_name: str = 'validation_raw', debug: bool = False, all_in_gpu: bool = False):
+        current_mode = self.network.training
+        self.network.eval()
+
+        assert self.was_initialized, "must initialize, ideally with checkpoint (or train first)"
+        if self.dataset_val is None:
+            self.load_dataset()
+            self.do_split()
+
+        # predictions as they come from the network go here
+        output_folder = join(self.output_folder, validation_folder_name)
+        maybe_mkdir_p(output_folder)
+        # this is for debug purposes
+        my_input_args = {'save_softmax': save_softmax,
+                         'overwrite': overwrite,
+                         'validation_folder_name': validation_folder_name,
+                         'debug': debug,
+                         'all_in_gpu': all_in_gpu,
+                         }
+        save_json(my_input_args, join(output_folder, "validation_args.json"))
+
+        pred_gt_tuples = []
+
+        for k in self.dataset_val.keys():
+            properties = load_pickle(self.dataset[k]['properties_file'])
+            fname = properties['list_of_data_files'][0].split("/")[-1][:-12]
+            save_fname = join(output_folder, fname + ".npy")
+            if overwrite or (not isfile(join(output_folder, fname + ".nii.gz"))) or \
+                    (save_softmax and not isfile(join(output_folder, fname + ".npz"))):
+                data = np.load(self.dataset[k]['data_file'])['data']
+
+                print(k, data.shape)
+                data[-1][data[-1] == -1] = 0
+                data[-1] = data[-1] / self.num_classes
+
+                pred, softmax_pred = self.predict_preprocessed_data_return_pred_and_softmax(data)[1]
+
+                np.save(save_fname, softmax_pred)
+
+            # TODO: save pred-gt pairs here
+        # TODO: compute performance and save it here
+
+        self.network.train(current_mode)
+
+    def predict_preprocessed_data_return_pred_and_softmax(self, data: np.ndarray) -> Tuple[List, List]:
+        valid = list((I3D,))
+        assert isinstance(self.network, tuple(valid))
+
+        current_mode = self.network.training
+        self.network.eval()
+        with torch.no_grad():
+            ret = [softmax_helper(output.cpu()).numpy() for output in self.network(data)]
+        self.network.train(current_mode)
+        return [np.argmax(x) for x in ret], ret
+
+    # Hier ben ik
+
+    def run_iteration(self, data_generator, do_backprop=True, run_online_evaluation=False):
         """
-        initialize self.optimizer and self.lr_scheduler (if applicable) here
+        gradient clipping improves training stability
+        :param data_generator:
+        :param do_backprop:
+        :param run_online_evaluation:
         :return:
         """
-        pass
+        data_dict = next(data_generator)
+        data = data_dict['data']
+        target = data_dict['target']
 
-    def load_dataset(self):
-        pass
+        data = maybe_to_torch(data)
+        target = maybe_to_torch(target)
 
-    def validate(self, *args, **kwargs):
-        pass
+        if torch.cuda.is_available():
+            data = to_cuda(data)
+            target = to_cuda(target)
 
-    def predict_test_case(self):
-        pass
+        self.optimizer.zero_grad()
 
-    def run_online_evaluation(self, *args, **kwargs): # optional
+        if self.fp16:
+            with autocast():
+                output = self.network(data)
+                del data
+                l = self.loss(output, target)
+
+            if do_backprop:
+                self.amp_grad_scaler.scale(l).backward()
+                self.amp_grad_scaler.unscale_(self.optimizer)
+                torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
+                self.amp_grad_scaler.step(self.optimizer)
+                self.amp_grad_scaler.update()
+        else:
+            output = self.network(data)
+            del data
+            l = self.loss(output, target)
+
+            if do_backprop:
+                l.backward()
+                torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
+                self.optimizer.step()
+
+        if run_online_evaluation:
+            self.run_online_evaluation(output, target)
+
+        del target
+
+        return l.detach().cpu().numpy()
+
+    def do_split(self):
         """
-        Can be implemented, does not have to
-        :param output_torch:
-        :param target_npy:
+        The default split is a 5 fold CV on all available training cases. nnU-Net will create a split (it is seeded,
+        so always the same) and save it as splits_final.pkl file in the preprocessed data directory.
+        Sometimes you may want to create your own split for various reasons. For this you will need to create your own
+        splits_final.pkl file. If this file is present, nnU-Net is going to use it and whatever splits are defined in
+        it. You can create as many splits in this file as you want. Note that if you define only 4 splits (fold 0-3)
+        and then set fold=4 when training (that would be the fifth split), nnU-Net will print a warning and proceed to
+        use a random 80:20 data split.
         :return:
         """
-        pass
+        if self.fold == "all":
+            # if fold==all then we use all images for training and validation
+            tr_keys = val_keys = list(self.dataset.keys())
+        else:
+            splits_file = join(self.dataset_directory, "splits_final.pkl")
 
-    def finish_online_evaluation(self): # optional
+            # if the split file does not exist we need to create it
+            if not isfile(splits_file):
+                self.print_to_log_file("Creating new 5-fold cross-validation split...")
+                splits = []
+                all_keys_sorted = np.sort(list(self.dataset.keys()))
+                kfold = KFold(n_splits=5, shuffle=True, random_state=12345)
+                for i, (train_idx, test_idx) in enumerate(kfold.split(all_keys_sorted)):
+                    train_keys = np.array(all_keys_sorted)[train_idx]
+                    test_keys = np.array(all_keys_sorted)[test_idx]
+                    splits.append(OrderedDict())
+                    splits[-1]['train'] = train_keys
+                    splits[-1]['val'] = test_keys
+                save_pickle(splits, splits_file)
+
+            else:
+                self.print_to_log_file("Using splits from existing split file:", splits_file)
+                splits = load_pickle(splits_file)
+                self.print_to_log_file("The split file contains %d splits." % len(splits))
+
+            self.print_to_log_file("Desired fold for training: %d" % self.fold)
+            if self.fold < len(splits):
+                tr_keys = splits[self.fold]['train']
+                val_keys = splits[self.fold]['val']
+                self.print_to_log_file("This split has %d training and %d validation cases."
+                                       % (len(tr_keys), len(val_keys)))
+            else:
+                self.print_to_log_file("INFO: You requested fold %d for training but splits "
+                                       "contain only %d folds. I am now creating a "
+                                       "random (but seeded) 80:20 split!" % (self.fold, len(splits)))
+                # if we request a fold that is not in the split file, create a random 80:20 split
+                rnd = np.random.RandomState(seed=12345 + self.fold)
+                keys = np.sort(list(self.dataset.keys()))
+                idx_tr = rnd.choice(len(keys), int(len(keys) * 0.8), replace=False)
+                idx_val = [i for i in range(len(keys)) if i not in idx_tr]
+                tr_keys = [keys[i] for i in idx_tr]
+                val_keys = [keys[i] for i in idx_val]
+                self.print_to_log_file("This random 80:20 split has %d training and %d validation cases."
+                                       % (len(tr_keys), len(val_keys)))
+
+        tr_keys.sort()
+        val_keys.sort()
+        self.dataset_tr = OrderedDict()
+        for i in tr_keys:
+            self.dataset_tr[i] = self.dataset[i]
+        self.dataset_val = OrderedDict()
+        for i in val_keys:
+            self.dataset_val[i] = self.dataset[i]
+
+    def maybe_update_lr(self, epoch=None):
         """
-        Can be implemented, does not have to
+        if epoch is not None we overwrite epoch. Else we use epoch = self.epoch + 1
+        (maybe_update_lr is called in on_epoch_end which is called before epoch is incremented.
+        herefore we need to do +1 here)
+        :param epoch:
         :return:
         """
-        pass
+        if epoch is None:
+            ep = self.epoch + 1
+        else:
+            ep = epoch
+        self.optimizer.param_groups[0]['lr'] = poly_lr(ep, self.max_num_epochs, self.initial_lr, 0.9)
+        self.print_to_log_file("lr:", np.round(self.optimizer.param_groups[0]['lr'], decimals=6))
+
+    def on_epoch_end(self):
+        """
+        overwrite patient-based early stopping. Always run to 1000 epochs
+        :return:
+        """
+        super().on_epoch_end()
+        continue_training = self.epoch < self.max_num_epochs
+
+        # TODO: maybe add this back in, but we would need another threshold since BCE is not going to be 0
+        """ 
+        # it can rarely happen that the momentum of nnUNetTrainerV2 is too high for some dataset. If at epoch 100 the
+        # estimated validation Dice is still 0 then we reduce the momentum from 0.99 to 0.95
+        if self.epoch == 100:
+            if self.all_val_eval_metrics[-1] == 0:
+                self.optimizer.param_groups[0]["momentum"] = 0.95
+                self.network.reinitialize()
+                self.print_to_log_file("At epoch 100, the mean foreground Dice was 0. This can be caused by a too "
+                                       "high momentum. High momentum (0.99) is good for datasets where it works, but "
+                                       "sometimes causes issues such as this one. Momentum has now been reduced to "
+                                       "0.95 and network weights have been reinitialized")
+        """
+        return continue_training
+
+    def save_debug_information(self):
+        # saving some debug information
+        dct = OrderedDict()
+        for k in self.__dir__():
+            if not k.startswith("__"):
+                if not callable(getattr(self, k)):
+                    dct[k] = str(getattr(self, k))
+        del dct['plans']
+        del dct['intensity_properties']
+        del dct['dataset']
+        del dct['dataset_tr']
+        del dct['dataset_val']
+        save_json(dct, join(self.output_folder, "debug.json"))
+
+        import shutil
+
+        shutil.copy(self.plans_file, join(self.output_folder_base, "plans.pkl"))
+
+    def run_training(self):
+        """
+        if we run with -c then we need to set the correct lr for the first epoch, otherwise it will run the first
+        continued epoch with self.initial_lr
+        we also need to make sure deep supervision in the network is enabled for training, thus the wrapper
+        :return:
+        """
+        self.maybe_update_lr(self.epoch)  # if we dont overwrite epoch then self.epoch+1 is used which is not what we
+        # want at the start of the training
+        self.save_debug_information()
+
+        super(ClassifierTrainer, self).run_training()
+
+    def plot_network_architecture(self):
+        print(type(self.network))
+
+    def save_checkpoint(self, fname, save_optimizer=True):
+        super(ClassifierTrainer, self).save_checkpoint(fname, save_optimizer)
+        info = OrderedDict()
+        info['init'] = self.init_args
+        info['name'] = self.__class__.__name__
+        info['class'] = str(self.__class__)
+        info['plans'] = self.plans
+
+        write_pickle(info, fname + ".pkl")
+
+    def run_online_evaluation(self, output, target):
+        pass  # TODO: implement this function (optional)
+
+    def finish_online_evaluation(self):
+        pass  # TODO: implement this function (optional)

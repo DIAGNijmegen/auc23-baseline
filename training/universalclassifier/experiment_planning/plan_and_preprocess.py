@@ -18,7 +18,6 @@
 
 
 from batchgenerators.utilities.file_and_folder_operations import *
-from nnunet.experiment_planning.DatasetAnalyzer import DatasetAnalyzer
 from nnunet.experiment_planning.utils import crop
 
 import shutil

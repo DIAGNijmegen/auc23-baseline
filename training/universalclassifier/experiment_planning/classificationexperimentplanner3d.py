@@ -62,7 +62,7 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
         sizes = self.dataset_properties['all_sizes']
 
         all_classes = self.dataset_properties['all_classes']
-        #all_classification_classes = self.dataset_properties['all_classification_classes']
+        all_classification_labels = self.dataset_properties['all_classification_labels']
         modalities = self.dataset_properties['modalities']
         num_modalities = len(list(modalities.keys()))
 
@@ -120,8 +120,8 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
                  'preprocessed_data_folder': self.preprocessed_output_folder,
                  'num_classes': len(all_classes),
                  'all_classes': all_classes,
-                 #'num_classification_classes': len(all_classification_classes),
-                 #'all_classification_classes': all_classification_classes,
+                 'num_classification_classes': [len(labels) for labels in all_classification_labels],
+                 'all_classification_labels': all_classification_labels,
                  'use_mask_for_norm': use_nonzero_mask_for_normalization,
                  'transpose_forward': self.transpose_forward, 'transpose_backward': self.transpose_backward,
                  'data_identifier': self.data_identifier, 'plans_per_stage': self.plans_per_stage,
