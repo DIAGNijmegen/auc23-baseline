@@ -58,5 +58,5 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    plan_and_preprocess.main()
+    plan_and_preprocess.main(parse_args())
     print("Completed planning and preprocessing.")
