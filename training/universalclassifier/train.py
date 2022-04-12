@@ -7,7 +7,7 @@ from fastai.vision.learner import Learner
 from fastai.callback.all import *
 from fastai.metrics import AccumMetric
 
-from algorithm.i3d.i3dpt import I3D
+from universalclassifier.algorithm.i3d.i3dpt import I3D
 from universalclassifier.ctdataset import CTDataset
 from universalclassifier.config import get_config
 from universalclassifier.metrics import acc_probseverecovid
@@ -46,7 +46,7 @@ def get_learn(config, data_dir, artifact_dir):
                           shuffle=True, drop_last=True)
     valid_dl = DataLoader(valid_ds, bs=config["batch_size"], num_workers=config["num_workers"])
 
-    model = I3D(nr_outputs=2).to(device)
+    model = universalclassifier.algorithm.i3d.i3dpt.I3D(nr_outputs=2).to(device)
 
     metrics = [
         AccumMetric(acc_probcovid, flatten=False),

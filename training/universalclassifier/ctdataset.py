@@ -4,7 +4,7 @@ import torch
 import os
 import numpy as np
 from torchio.transforms import Compose, RandomAffine, RandomNoise
-from algorithm.preprocess import preprocess
+from universalclassifier.algorithm.preprocess import preprocess
 
 
 class CTDataset(Dataset):

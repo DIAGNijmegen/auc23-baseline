@@ -15,11 +15,7 @@ WORKDIR /opt/train
 
 ENV PATH="/home/train/.local/bin:${PATH}"
 
-
-
 RUN python -m pip install --user -U pip
-
-
 
 COPY --chown=train:train requirements.txt /opt/train/
 RUN python -m pip install --user -r requirements.txt
