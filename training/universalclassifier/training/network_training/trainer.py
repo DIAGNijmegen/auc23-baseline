@@ -442,7 +442,7 @@ class ClassifierTrainer(NetworkTrainer):
         super().on_epoch_end()
         continue_training = self.epoch < self.max_num_epochs
 
-        # TODO: maybe add this back in, but we would need another threshold since BCE is not going to be 0
+        # TODO: maybe add this back in?, but then we would need another threshold since BCE is not going to be 0
         """ 
         # it can rarely happen that the momentum of nnUNetTrainerV2 is too high for some dataset. If at epoch 100 the
         # estimated validation Dice is still 0 then we reduce the momentum from 0.99 to 0.95
