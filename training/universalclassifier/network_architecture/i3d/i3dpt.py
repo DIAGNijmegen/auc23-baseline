@@ -8,6 +8,7 @@ import os
 import numpy as np
 import torch
 
+from torch.autograd import Variable
 
 def get_padding_shape(filter_shape, stride):
     def _pad_top_bottom(filter_dim, stride_val):
@@ -161,6 +162,45 @@ class Mixed(torch.nn.Module):
         return out
 
 
+def extend_pretrained_conv3d_1a_7x7(conv3d_1a_7x7_old, channels_before, channels_after):
+    conv3d_1a_7x7_new = Unit3Dpy(
+        out_channels=64,
+        in_channels=channels_after,
+        kernel_size=(7, 7, 7),
+        stride=(2, 2, 2),
+        padding='SAME')
+
+
+    # fill new weights with pretrained weights.
+    # E.g. for pretrained weights with channels ABC, new 5 channel weights becomes ABCAB*3/5, 2 channels becomes AB*3/2
+    with torch.no_grad():
+        for it in range(0, channels_after, channels_before):
+            start = it
+            step = min(channels_after - it, channels_before)
+            end = start + step
+            conv3d_1a_7x7_new.conv3d.weight[:, start:end] = conv3d_1a_7x7_old.conv3d.weight[:, :step]
+        conv3d_1a_7x7_new.conv3d.weight *= channels_before/channels_after
+
+    return conv3d_1a_7x7_new
+
+"""
+if __name__ == "__main__":
+    channels_before = 3
+    channels_after = 5
+    conv3d_1a_7x7_old = Unit3Dpy(
+        out_channels=64,
+        in_channels=3,
+        kernel_size=(7, 7, 7),
+        stride=(2, 2, 2),
+        padding='SAME')
+    conv3d_1a_7x7_new = extend_pretrained_conv3d_1a_7x7(conv3d_1a_7x7_old, channels_before, channels_after)
+
+    print(conv3d_1a_7x7_new.conv3d.weight.shape)
+    print(conv3d_1a_7x7_old.conv3d.weight[:4,:,0,0,0])
+    print(conv3d_1a_7x7_new.conv3d.weight[:4,:,0,0,0])
+    print("done.")
+"""
+
 class I3D(torch.nn.Module):
     def __init__(self,
                  input_channels=3,
@@ -177,20 +217,21 @@ class I3D(torch.nn.Module):
         self.input_channels = input_channels
         self.pre_trained_path = pre_trained_path
         if modality == 'rgb':
-            in_channels = 3
+            original_in_channels = 3
         elif modality == 'flow':
-            in_channels = 2
+            original_in_channels = 2
         else:
             raise ValueError(
                 '{} not among known modalities [rgb|flow]'.format(modality))
-        if in_channels != input_channels:
-            raise ValueError("Modality "+str(modality)+' does not correspond to input_channels '+str(input_channels) +
-                             '. input_channels should be: '+str(3 if modality == 'rgb' else 2))
         self.modality = modality
 
+        if pre_trained:
+            first_layer_init_in_channels = original_in_channels
+        else:
+            first_layer_init_in_channels = input_channels
         conv3d_1a_7x7 = Unit3Dpy(
             out_channels=64,
-            in_channels=in_channels,
+            in_channels=first_layer_init_in_channels,
             kernel_size=(7, 7, 7),
             stride=(2, 2, 2),
             padding='SAME')
@@ -249,15 +290,15 @@ class I3D(torch.nn.Module):
 
         if pre_trained:
             self.load_state_dict(torch.load(pre_trained_path))
+            self.conv3d_1a_7x7.conv3d = extend_pretrained_conv3d_1a_7x7(self.conv3d_1a_7x7,
+                                                                        original_in_channels,
+                                                                        input_channels)
 
         # add new final linear layer to replace the original one
         linear_list = [torch.nn.Linear(1024, nr) for nr in nr_outputs]
         self.linear_list = torch.nn.ModuleList(linear_list)
 
     def forward(self, inp):
-        if self.input_channels == 3 and inp.shape[1] == 1:
-            inp = inp.expand(-1, 3, -1, -1, -1)
-
         out = self.conv3d_1a_7x7(inp)
         out = self.maxPool3d_2a_3x3(out)
         out = self.conv3d_2b_1x1(out)
