@@ -3,7 +3,6 @@ from batchgenerators.utilities.file_and_folder_operations import *
 from nnunet.training.dataloading.dataset_loading import get_case_identifiers
 import numpy as np
 
-
 def load_dataset(folder_with_preprocessed_data, dataset_directory, cases_key, num_cases_properties_loading_threshold=1000):
     dataset_json = load_json(join(dataset_directory, 'dataset.json'))
     cases = dataset_json[cases_key]
@@ -15,7 +14,7 @@ def load_dataset(folder_with_preprocessed_data, dataset_directory, cases_key, nu
     case_identifiers = get_case_identifiers(folder_with_preprocessed_data)
     case_identifiers.sort()
 
-    assert set(cases.keys()) == set(case_identifiers)
+    assert set(metadata.keys()) == set(case_identifiers)
 
     dataset = OrderedDict()
     for c in case_identifiers:
@@ -26,7 +25,7 @@ def load_dataset(folder_with_preprocessed_data, dataset_directory, cases_key, nu
         dataset[c]['properties_file'] = join(folder_with_preprocessed_data, "%s.pkl" % c)
         dataset[c]['classification_labels'] = classification_labels
         if cases_key == 'training':
-            dataset[c]['target'] = np.asarray([metadata[label["name"]] for label in classification_labels])
+            dataset[c]['target'] = np.asarray([metadata[c][label["name"]] for label in classification_labels])
 
         if dataset[c].get('seg_from_prev_stage_file') is not None:
             dataset[c]['seg_from_prev_stage_file'] = join(folder_with_preprocessed_data, "%s_segs.npz" % c)

@@ -106,7 +106,8 @@ def get_moreDA_augmentation(dataloader_train, dataloader_val, patch_size, params
     tr_transforms.append(RescaleSegmentationTransform(params.get("num_seg_classes")))  # added
     tr_transforms.append(MoveSegToDataChannel())  # added
 
-    tr_transforms.append(NumpyToTensor(['data', 'target'], 'float'))
+    tr_transforms.append(NumpyToTensor(['data'], 'float'))
+    tr_transforms.append(NumpyToTensor(['target'], 'long'))  # also works for converting list of arrays to list of tensors
     tr_transforms = Compose(tr_transforms)
 
     if use_nondetMultiThreadedAugmenter:
@@ -135,7 +136,8 @@ def get_moreDA_augmentation(dataloader_train, dataloader_val, patch_size, params
     val_transforms.append(RescaleSegmentationTransform(params.get("num_seg_classes")))  # added
     val_transforms.append(MoveSegToDataChannel())  # added
 
-    val_transforms.append(NumpyToTensor(['data', 'target'], 'float'))
+    val_transforms.append(NumpyToTensor(['data'], 'float'))
+    val_transforms.append(NumpyToTensor(['target'], 'long'))  # also works for converting list of arrays to list of tensors
     val_transforms = Compose(val_transforms)
 
     if use_nondetMultiThreadedAugmenter:

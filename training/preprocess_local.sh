@@ -13,5 +13,4 @@ export nnUNet_raw_data_base="/home/lhboulogne/Documents/phd/data/dummy_data/raw"
 export nnUNet_preprocessed="/home/lhboulogne/Documents/phd/data/dummy_data/preprocessed"
 export RESULTS_FOLDER="/home/lhboulogne/Documents/phd/data/dummy_data/trained_models"
 
-python3 universalclassifier/experiment_planning/plan_and_preprocess.py \
- -t 1 -tf 4 -tl 4 --planner3d ClassificationExperimentPlanner3D --planner2d None
+python3 plan_and_preprocess.py -t 1 -tf 4 -tl 4 --planner3d ClassificationExperimentPlanner3D --planner2d None

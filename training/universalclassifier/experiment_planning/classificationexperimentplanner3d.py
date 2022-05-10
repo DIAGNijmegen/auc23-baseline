@@ -15,7 +15,7 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
     def __init__(self, folder_with_cropped_data, preprocessed_output_folder):
         super().__init__(folder_with_cropped_data, preprocessed_output_folder)
         self.data_identifier = "universal_classifier_plans_v1.0"
-        self.plans_fname = join(self.preprocessed_output_folder, "UniversalClassifierPlans" + "fixed_plans_3D.pkl")
+        self.plans_fname = join(self.preprocessed_output_folder, "UniversalClassifierPlansv1.0_plans_3D.pkl")
         self.preprocessor_name = "UniversalClassifierPreprocessor"
         self.max_shape_limit = [240, 240, 240]  # hard coded for now
         self.minimum_batch_size = 2  # Works for I3dr model with 240^3 img size

@@ -15,7 +15,7 @@ from nnunet.utilities.to_torch import maybe_to_torch, to_cuda
 
 import numpy as np
 import torch
-from torch.nn import BCEWithLogitsLoss
+from torch.nn import CrossEntropyLoss
 from torch.cuda.amp import autocast
 
 from sklearn.model_selection import KFold
@@ -65,7 +65,7 @@ class ClassifierTrainer(NetworkTrainer):
             self.intensity_properties = self.normalization_schemes = self.image_size = None  # loaded automatically from plans_file
         self.data_aug_params = self.transpose_forward = self.transpose_backward = None
 
-        self.loss = BCEWithLogitsLoss()
+        self.loss = CrossEntropyLoss()
 
         self.classes = self.do_dummy_2D_aug = self.use_mask_for_norm = None
 
@@ -79,6 +79,10 @@ class ClassifierTrainer(NetworkTrainer):
         self.initial_lr = 1e-2
 
         self.pin_memory = True
+
+
+        self.num_batches_per_epoch = 2 #debugging purposes
+        self.num_val_batches_per_epoch = 2 #debugging purposes
 
 
     def update_fold(self, fold):
@@ -168,11 +172,10 @@ class ClassifierTrainer(NetworkTrainer):
 
         self.intensity_properties = plans['dataset_properties']['intensityproperties']
         self.normalization_schemes = plans['normalization_schemes']
-        self.num_input_channels = plans['num_modalities']
-        self.num_classes = plans['num_classes'] + 1
+        self.num_input_channels = plans['num_modalities'] + 1  # +1 for roi/segmentation channel
+        self.num_classes = plans['num_classes'] + 1  # classes in roi/segmentation map
+        self.classes = plans['all_classes']  # classes in roi/segmentation map
         self.num_classification_classes = plans['num_classification_classes']
-        self.num_input_channels = plans['num_modalities']
-        self.classes = plans['all_classes']
         self.use_mask_for_norm = plans['use_mask_for_norm']
 
         if plans.get('transpose_forward') is None or plans.get('transpose_backward') is None:
@@ -184,7 +187,14 @@ class ClassifierTrainer(NetworkTrainer):
         self.transpose_forward = plans['transpose_forward']
         self.transpose_backward = plans['transpose_backward']
 
-        self.image_size = plans['size after central pad']  ## added
+        self.image_size = stage_plans['image_size']  ## added
+
+        if len(self.image_size) == 2:
+            self.threeD = False
+        elif len(self.image_size) == 3:
+            self.threeD = True
+        else:
+            raise RuntimeError("invalid image size in plans file: %s" % str(self.patch_size))
 
     def setup_DA_params(self):
         if self.threeD:
@@ -305,6 +315,7 @@ class ClassifierTrainer(NetworkTrainer):
     # Hier ben ik
 
     def run_iteration(self, data_generator, do_backprop=True, run_online_evaluation=False):
+        print("new batch")  # debugging purposes
         """
         gradient clipping improves training stability
         :param data_generator:
