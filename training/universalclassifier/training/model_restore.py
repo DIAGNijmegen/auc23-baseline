@@ -18,12 +18,9 @@
 # happens in NetworkTrainer. Not sure why this is in the training folder in the original nnunet codebase.
 
 
-import nnunet
+import universalclassifier
 import torch
 from batchgenerators.utilities.file_and_folder_operations import *
-import importlib
-import pkgutil
-from nnunet.training.network_training.nnUNetTrainer import nnUNetTrainer
 from nnunet.training.model_restore import recursive_find_python_class
 
 def restore_model(pkl_file, checkpoint=None, train=False, fp16=None):
@@ -41,8 +38,8 @@ def restore_model(pkl_file, checkpoint=None, train=False, fp16=None):
     info = load_pickle(pkl_file)
     init = info['init']
     name = info['name']
-    search_in = join(nnunet.__path__[0], "training", "network_training")
-    tr = recursive_find_python_class([search_in], name, current_module="nnunet.training.network_training")
+    search_in = join(universalclassifier.__path__[0], "training", "network_training")
+    tr = recursive_find_python_class([search_in], name, current_module="universalclassifier.training.network_training")
 
     if tr is None:
         """
