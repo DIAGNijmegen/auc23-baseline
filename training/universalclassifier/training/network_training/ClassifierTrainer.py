@@ -29,6 +29,12 @@ from multiprocessing import Pool
 from nnunet.configuration import default_num_threads
 
 from typing import Tuple, List
+from nnunet.utilities.random_stuff import no_op
+
+from universalclassifier.inference.export import save_output
+
+import universalclassifier
+
 
 class ClassifierTrainer(NetworkTrainer):
 
@@ -278,8 +284,6 @@ class ClassifierTrainer(NetworkTrainer):
                          }
         save_json(my_input_args, join(output_folder, "validation_args.json"))
 
-        pred_gt_tuples = []
-
         for k in self.dataset_val.keys():
             properties = load_pickle(self.dataset[k]['properties_file'])
             fname = properties['list_of_data_files'][0].split("/")[-1][:-12]
@@ -288,11 +292,9 @@ class ClassifierTrainer(NetworkTrainer):
                     (save_softmax and not isfile(join(output_folder, fname + ".npz"))):
                 data = np.load(self.dataset[k]['data_file'])['data']
 
-                print(k, data.shape)
-                data[-1][data[-1] == -1] = 0
-                data[-1] = data[-1] / self.num_classes
+                data = self.rescale_segmentation_channel(data)
 
-                pred, softmax_pred = self.predict_preprocessed_data_return_pred_and_softmax(data)[1]
+                pred, softmax_pred = self.predict_preprocessed_data_return_pred_and_softmax(data, self.fp16)[1]
 
                 np.save(save_fname, softmax_pred)
 
@@ -301,18 +303,25 @@ class ClassifierTrainer(NetworkTrainer):
 
         self.network.train(current_mode)
 
-    def predict_preprocessed_data_return_pred_and_softmax(self, data: np.ndarray) -> Tuple[List, List]:
+    def predict_preprocessed_data_return_pred_and_softmax(self, data: np.ndarray,
+                                                          mixed_precision: bool) -> Tuple[List, List]:
         valid = list((I3D,))
         assert isinstance(self.network, tuple(valid))
 
         current_mode = self.network.training
         self.network.eval()
-        with torch.no_grad():
-            ret = [softmax_helper(output.cpu()).numpy() for output in self.network(data)]
+
+        if mixed_precision:
+            context = autocast
+        else:
+            context = no_op
+
+        with context():
+            with torch.no_grad():
+                ret = [softmax_helper(output.cpu()).numpy() for output in self.network(data)]
         self.network.train(current_mode)
         return [np.argmax(x) for x in ret], ret
 
-    # Hier ben ik
 
     def run_iteration(self, data_generator, do_backprop=True, run_online_evaluation=False):
         print("new batch")  # debugging purposes
@@ -517,3 +526,61 @@ class ClassifierTrainer(NetworkTrainer):
 
     def finish_online_evaluation(self):
         pass  # TODO: implement this function (optional)
+
+    def preprocess_patient(self, input_files, seg_file):
+        """
+                Used to predict new unseen data. Not used for the preprocessing of the training/test data
+                :param input_files:
+                :param seg_file:
+                :return:
+                """
+        from nnunet.training.model_restore import recursive_find_python_class
+        preprocessor_name = self.plans.get('preprocessor_name')
+        if preprocessor_name is None:
+            if self.threeD:
+                preprocessor_name = "UniversalClassifierPreprocessor"
+            else:
+                raise RuntimeError("2D preprocessor not implemented")
+
+        print("using preprocessor", preprocessor_name)
+        preprocessor_class = recursive_find_python_class([join(universalclassifier.__path__[0], "preprocessing")],
+                                                         preprocessor_name,
+                                                         current_module="universalclassifier.preprocessing")
+
+        assert preprocessor_class is not None, "Could not find preprocessor %s in nnunet.preprocessing" % \
+                                               preprocessor_name
+        preprocessor = preprocessor_class(self.normalization_schemes, self.use_mask_for_norm,
+                                          self.transpose_forward, self.intensity_properties)
+
+        d, s, properties = preprocessor.preprocess_test_case(input_files,
+                                                             self.plans['plans_per_stage'][self.stage][
+                                                                 'current_spacing'],
+                                                             seg_file)
+        return d, s, properties
+
+    def preprocess_predict_nifti(self, input_files: List[str], seg_file: str, output_file: str = None) -> None:
+        """
+        Use this to predict new data
+        :param input_files:
+        :param seg_file:
+        :param output_file:
+        :return:
+        """
+        print("preprocessing...")
+        d, s, properties = self.preprocess_patient(input_files, seg_file)
+        data = self.combine_data_and_seg(d, s)
+        print("predicting...")
+        categorical_output, pred = self.predict_preprocessed_data_return_pred_and_softmax(data, self.fp16)[1]  # generates softmax output
+        print("exporting prediction...")
+        save_output(categorical_output, pred, output_file, properties)
+        print("done")
+
+    def combine_data_and_seg(self, data, seg):
+        data = np.vstack((data, seg)).astype(np.float32)
+        data = self.rescale_segmentation_channel(data)
+        return data
+
+    def rescale_segmentation_channel(self, data):
+        data[-1][data[-1] == -1] = 0
+        data[-1] = data[-1] / self.num_classes  # this is number of classes in segmentation omap
+        return data

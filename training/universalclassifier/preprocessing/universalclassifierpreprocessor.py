@@ -4,7 +4,7 @@ from nnunet.preprocessing.cropping import get_case_identifier_from_npz
 from batchgenerators.utilities.file_and_folder_operations import *
 from multiprocessing.pool import Pool
 from nnunet.preprocessing.preprocessing import GenericPreprocessor
-
+from universalclassifier.preprocessing.cropping import ClassificationImageCropper
 
 def central_pad_data_or_seg(np_image, target_size, outside_val=0):
     target_size = np.asarray([np_image.shape[0]] + list(target_size), dtype=np.int)
@@ -116,3 +116,13 @@ class UniversalClassifierPreprocessor(GenericPreprocessor):
                             data=all_data.astype(np.float32))
         with open(os.path.join(output_folder_stage, "%s.pkl" % case_identifier), 'wb') as f:
             pickle.dump(properties, f)
+
+    def preprocess_test_case(self, data_files, target_spacing, seg_file=None, force_separate_z=None):
+        data, seg, properties = ClassificationImageCropper.crop_from_list_of_files(data_files, seg_file)
+
+        data = data.transpose((0, *[i + 1 for i in self.transpose_forward]))
+        seg = seg.transpose((0, *[i + 1 for i in self.transpose_forward]))
+
+        data, seg, properties = self.resample_and_normalize(data, target_spacing, properties, seg,
+                                                            force_separate_z=force_separate_z)
+        return data.astype(np.float32), seg, properties

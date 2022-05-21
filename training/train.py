@@ -1,8 +1,8 @@
 
 from universalclassifier.run.run_training import run_training
 import argparse
+from universalclassifier.paths import default_plans_identifier
 
-default_plans_identifier = "UniversalClassifierPlansv1.0"  #TODO make solution like nnunet.paths and set plans_identifier there
 
 
 def main():
