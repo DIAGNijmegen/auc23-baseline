@@ -54,6 +54,15 @@ def predict(args):
     print("using model stored in ", model_folder_name)
     assert isdir(model_folder_name), "model output folder not found. Expected: %s" % model_folder_name
 
+    if seg_folder is not None and isdir(seg_folder):
+        print("\nSegmentation folder found. If this folder does not contain cases for each case in the input folder, "
+              "I will crash. If training was done without segmentation masks, please abort and rerun without specifying"
+              " the segmentation folder.\n")
+    else:
+        print("\nSegmentation folder not found. I will generate empty segmentation masks to runn inference. \nWARNING: If "
+              "training was done with segmentation masks, I will run inference, but fail silently, producing "
+              "poor results.\n")  #Todo make it not fail silently
+
     predict_from_folder(model_folder_name, input_folder, seg_folder, output_folder, folds,
                         mixed_precision=not args.disable_mixed_precision, overwrite_existing=overwrite_existing,
                         checkpoint_name=args.chk)

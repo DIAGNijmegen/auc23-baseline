@@ -73,10 +73,14 @@ def predict_from_folder(model: str, input_folder: str, seg_folder: str, output_f
     all_files = subfiles(input_folder, suffix=".nii.gz", join=False, sort=True)
     list_of_lists = [[join(input_folder, i) for i in all_files if i[:len(j)].startswith(j) and
                       len(i) == (len(j) + 12)] for j in case_ids]
-    seg_files = subfiles(seg_folder, suffix=".nii.gz", join=False, sort=True)
-    if not all([d[0].split('_')[0] + '.nii.gz' == s for d, s in zip(list_of_lists, seg_files)]):
-        raise RuntimeError(f"Please make sure that fore each case ID in {input_folder} a corresponding case ID exists "
-                           f"in {seg_folder} and vice versa")
+    if seg_folder is None:
+        print("No segmentation folder specified. Will generate emtpy segmentation masks for inference.")
+        seg_files = [None] * len(case_ids)
+    else:
+        seg_files = subfiles(seg_folder, suffix=".nii.gz", join=False, sort=True)
+        if not all([d[0].split('_')[0] + '.nii.gz' == s for d, s in zip(list_of_lists, seg_files)]):
+            raise RuntimeError(f"Please make sure that for each case ID in {input_folder} a corresponding case ID "
+                               f"exists in {seg_folder} and vice versa.")
     return predict_cases(model, list_of_lists, seg_files, output_files, folds, mixed_precision=mixed_precision,
                          overwrite_existing=overwrite_existing, checkpoint_name=checkpoint_name)
 
@@ -86,7 +90,7 @@ def predict_cases(model, list_of_lists_of_modality_filenames, seg_filenames, out
     """
     :param model: folder where the model is saved, must contain fold_x subfolders
     :param list_of_lists_of_modality_filenames: [[case0_0000.nii.gz, case0_0001.nii.gz], [case1_0000.nii.gz, case1_0001.nii.gz], ...]
-    :param seg_filenames: [case0.nii.gz, case1.nii.gz, ...]
+    :param seg_filenames: [case0.nii.gz, case1.nii.gz, ...], or [None, None, ...] if the model was trained with emtpy segmentation masks
     :param output_filenames: [output_file_case0.npz, output_file_case1.npz, ...]
     :param folds: default: (0, 1, 2, 3, 4) (but can also be 'all' or a subset of the five folds, for example use (0, )
     for using only fold_0

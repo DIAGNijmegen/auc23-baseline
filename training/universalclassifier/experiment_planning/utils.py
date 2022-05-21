@@ -8,7 +8,7 @@ from nnunet.experiment_planning.utils import create_lists_from_splitted_dataset
 from universalclassifier.preprocessing.cropping import ClassificationImageCropper
 
 
-def crop(task_string, override=False, num_threads=default_num_threads):
+def crop(task_string, override=False, num_threads=default_num_threads, create_dummy_seg=False):
     cropped_out_dir = join(nnUNet_cropped_data, task_string)
     maybe_mkdir_p(cropped_out_dir)
 

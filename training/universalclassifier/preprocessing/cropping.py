@@ -57,12 +57,18 @@ def crop_to_seg(data, seg=None, nonzero_label=-1, margin=0.05):
 
 class ClassificationImageCropper(ImageCropper):
     @staticmethod
-    def crop_from_list_of_files(data_files, seg_file=None):
+    def crop_from_list_of_files(data_files, seg_file=None, create_dummy_seg=False):
+        if seg_file is None:
+            assert create_dummy_seg
         data, seg, properties = load_case_from_list_of_files(data_files, seg_file)
+        if create_dummy_seg:
+            seg = np.ones_like(data[0])
         return ClassificationImageCropper.crop(data, properties, seg)
 
     @staticmethod
     def crop(data, properties, seg=None):
+        # always have an (empty) segmentation mask as input to the model. None in argument to match signature
+        assert seg is not None
         shape_before = data.shape
         data, seg, bbox = crop_to_nonzero(data, seg, nonzero_label=-1)
         shape_after = data.shape

@@ -9,13 +9,13 @@ def main():
                                                      " order (same as training). Files must be named "
                                                      "CASENAME_XXXX.nii.gz where XXXX is the modality "
                                                      "identifier (0000, 0001, etc)", required=True)
-    parser.add_argument('-o', "--output_folder", required=True, help="folder for saving predictions")
-    parser.add_argument('-o', "--seg_folder", required=False, default=None,
+    parser.add_argument('-s', "--seg_folder", required=False, default=None,
                         help="Folder with segmentations. If not provided, stand-in empty segmentation masks will be "
                              "generated as input to the model. If you provided segmentations at train time, please make"
-                             "sure to also provide them at test time. Otherwise the model will fail silently. Maybe fix"
-                             "this in the future by saving whether real input segmentations are needed in the trainer "
-                             "state.")
+                             "sure to also provide them at test time. Otherwise the model will fail silently. (TODO: "
+                             "fix this in the future by saving whether real input segmentations are needed in the "
+                             "trainer state)")
+    parser.add_argument('-o', "--output_folder", required=True, help="folder for saving predictions")
     parser.add_argument('-t', '--task_name', help='task name or task ID, required.',
                         default=default_plans_identifier, required=True)
     parser.add_argument('-tr', '--trainer_class_name',

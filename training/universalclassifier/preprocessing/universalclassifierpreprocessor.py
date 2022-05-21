@@ -118,7 +118,8 @@ class UniversalClassifierPreprocessor(GenericPreprocessor):
             pickle.dump(properties, f)
 
     def preprocess_test_case(self, data_files, target_spacing, seg_file=None, force_separate_z=None):
-        data, seg, properties = ClassificationImageCropper.crop_from_list_of_files(data_files, seg_file)
+        data, seg, properties = ClassificationImageCropper.crop_from_list_of_files(data_files, seg_file,
+                                                                                   seg_file is None)
 
         data = data.transpose((0, *[i + 1 for i in self.transpose_forward]))
         seg = seg.transpose((0, *[i + 1 for i in self.transpose_forward]))
