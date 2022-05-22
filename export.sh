@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-./build.sh
+./build.sh $1
 
-docker save universalclassifier | gzip -c > universalclassifier.tar.gz
+docker save doduo1.umcn.nl/universalclassifier/training:$1 | gzip -c > universalclassifier_training_v$1.tar.gz
