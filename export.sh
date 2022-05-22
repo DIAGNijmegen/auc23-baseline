@@ -2,4 +2,4 @@
 
 ./build.sh
 
-docker save stoictrain | gzip -c > STOICTrain.tar.gz
+docker save universalclassifier | gzip -c > universalclassifier.tar.gz
