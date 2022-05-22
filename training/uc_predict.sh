@@ -14,4 +14,4 @@ fi
 
 export RESULTS_FOLDER="$1/trained_models"
 
-python3 predict.py ${@:2}
+python3 uc_predict.py ${@:2}

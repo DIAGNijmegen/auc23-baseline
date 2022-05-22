@@ -4,31 +4,32 @@
 FROM pytorch/pytorch
 
 RUN apt-get update
-RUN groupadd -r train && useradd -m --no-log-init -r -g train train
+RUN groupadd -r uc && useradd -m --no-log-init -r -g uc uc
 
-RUN mkdir -p /opt/train /input /output \
-    && chown train:train /opt/train /input /output
+RUN mkdir -p /opt/uc /input /output \
+    && chown uc:uc /opt/uc /input /output
 
-USER train
+USER uc
 
-WORKDIR /opt/train
+WORKDIR /opt/uc
 
-ENV PATH="/home/train/.local/bin:${PATH}"
+ENV PATH="/home/uc/.local/bin:${PATH}"
 
 RUN python -m pip install --user -U pip
 
-COPY --chown=train:train requirements.txt /opt/train/
+COPY --chown=uc:uc requirements.txt /opt/uc/
 RUN python -m pip install --user -r requirements.txt
 
-COPY --chown=train:train universalclassifier/ /opt/train/universalclassifier
-COPY --chown=train:train train.py /opt/train/
-COPY --chown=train:train main.py /opt/train/
+COPY --chown=uc:uc universalclassifier/ /opt/uc/universalclassifier
+COPY --chown=uc:uc uc_plan_and_preprocess.sh /opt/uc/
+COPY --chown=uc:uc uc_plan_and_preprocess.py /opt/uc/
+COPY --chown=uc:uc uc_predict.sh /opt/uc/
+COPY --chown=uc:uc uc_predict.py /opt/uc/
+COPY --chown=uc:uc uc_train.sh /opt/uc/
+COPY --chown=uc:uc uc_train_on_sol.sh /opt/uc/
+COPY --chown=uc:uc uc_train.py /opt/uc/
 
-ENV nnUNet_raw_data_base="/input/"
-ENV nnUNet_preprocessed="/home/preprocessed"
-ENV RESULTS_FOLDER="/output/trained_models"
-
-ENTRYPOINT python -m main $0 $@
+ENTRYPOINT bash $@
 
 
 

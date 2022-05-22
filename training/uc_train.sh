@@ -12,11 +12,10 @@ do
   exit
 fi
 
-python3 copy_preprocessed.py $4 $1/preprocessed /preprocessed  # $4 is the task name or task ID
 mkdir -p "$1/trained_models"
 
 #export nnUNet_raw_data_base="$1/raw"
-export nnUNet_preprocessed="/preprocessed"
+export nnUNet_preprocessed="$1/preprocessed"
 export RESULTS_FOLDER="$1/trained_models"
 
-python3 train.py ${@:2}
+python3 uc_train.py ${@:2}
