@@ -294,7 +294,7 @@ class ClassifierTrainer(NetworkTrainer):
 
                 data = self.rescale_segmentation_channel(data)
 
-                pred, softmax_pred = self.predict_preprocessed_data_return_pred_and_softmax(data, self.fp16)[1]
+                pred, softmax_pred = self.predict_preprocessed_data_return_pred_and_softmax(data[None], self.fp16)[1]
 
                 np.save(save_fname, softmax_pred)
 
@@ -315,6 +315,10 @@ class ClassifierTrainer(NetworkTrainer):
             context = autocast
         else:
             context = no_op
+
+        data = maybe_to_torch(data)
+        if torch.cuda.is_available():
+            data = to_cuda(data)
 
         with context():
             with torch.no_grad():
@@ -570,7 +574,7 @@ class ClassifierTrainer(NetworkTrainer):
         d, s, properties = self.preprocess_patient(input_files, seg_file)
         data = self.combine_data_and_seg(d, s)
         print("predicting...")
-        categorical_output, pred = self.predict_preprocessed_data_return_pred_and_softmax(data, self.fp16)[1]  # generates softmax output
+        categorical_output, pred = self.predict_preprocessed_data_return_pred_and_softmax(data[None], self.fp16)[1]  # generates softmax output
         print("exporting prediction...")
         save_output(categorical_output, pred, output_file, properties)
         print("done")

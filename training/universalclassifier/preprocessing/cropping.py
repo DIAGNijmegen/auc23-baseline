@@ -62,7 +62,10 @@ class ClassificationImageCropper(ImageCropper):
             assert create_dummy_seg
         data, seg, properties = load_case_from_list_of_files(data_files, seg_file)
         if create_dummy_seg:
-            seg = np.ones_like(data[0])
+            seg = np.ones_like(data[:1])
+        print("Shapes:")
+        print(seg.shape)
+        print(data.shape)
         return ClassificationImageCropper.crop(data, properties, seg)
 
     @staticmethod

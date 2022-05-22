@@ -69,7 +69,7 @@ def predict_from_folder(model: str, input_folder: str, seg_folder: str, output_f
     # check input folder integrity
     case_ids = check_input_folder_and_return_caseIDs(input_folder, expected_num_modalities)
 
-    output_files = [join(output_folder, i + ".nii.gz") for i in case_ids]
+    output_files = [join(output_folder, i + ".npz") for i in case_ids]
     all_files = subfiles(input_folder, suffix=".nii.gz", join=False, sort=True)
     list_of_lists = [[join(input_folder, i) for i in all_files if i[:len(j)].startswith(j) and
                       len(i) == (len(j) + 12)] for j in case_ids]
@@ -136,11 +136,11 @@ def predict_cases(model, list_of_lists_of_modality_filenames, seg_filenames, out
 
         print("predicting...")
         trainer.load_checkpoint_ram(params[0], False)
-        pred = trainer.predict_preprocessed_data_return_pred_and_softmax(d, mixed_precision=mixed_precision)[1]
+        pred = trainer.predict_preprocessed_data_return_pred_and_softmax(d[None], mixed_precision=mixed_precision)[1]
 
         for p in params[1:]:
             trainer.load_checkpoint_ram(p, False)
-            new_pred = trainer.predict_preprocessed_data_return_pred_and_softmax(d, mixed_precision=mixed_precision)[1]
+            new_pred = trainer.predict_preprocessed_data_return_pred_and_softmax(d[None], mixed_precision=mixed_precision)[1]
             for it in range(len(pred)):
                 pred = [p + n_p for p, n_p in zip(pred, new_pred)]
 
