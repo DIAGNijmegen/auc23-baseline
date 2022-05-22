@@ -3,7 +3,7 @@ from nnunet.utilities.task_name_id_conversion import convert_id_to_task_name
 import os
 import shutil
 
-
+# Currently copies all plans folders for the task.
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("task_name", help="can be task name or task id")
