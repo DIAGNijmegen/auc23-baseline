@@ -14,7 +14,7 @@ fi
 
 mkdir -p "$1/trained_models"
 
-#export nnUNet_raw_data_base="$1/raw"
+export nnUNet_raw_data_base="$1/raw"
 export nnUNet_preprocessed="$1/preprocessed"
 export RESULTS_FOLDER="$1/trained_models"
 

@@ -16,6 +16,6 @@ mkdir -p "$1/preprocessed"
 
 export nnUNet_raw_data_base="$1/raw"
 export nnUNet_preprocessed="$1/preprocessed"
-#export RESULTS_FOLDER="$1/trained_models"
+export RESULTS_FOLDER="$1/trained_models"
 
 python3 uc_plan_and_preprocess.py ${@:2}
