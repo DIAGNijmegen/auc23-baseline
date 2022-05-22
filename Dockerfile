@@ -29,7 +29,7 @@ COPY --chown=uc:uc uc_train.sh /opt/uc/
 COPY --chown=uc:uc uc_train_on_sol.sh /opt/uc/
 COPY --chown=uc:uc uc_train.py /opt/uc/
 
-ENTRYPOINT bash $@
+ENTRYPOINT bash $0 $@
 
 
 

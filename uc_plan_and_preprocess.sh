@@ -1,13 +1,14 @@
 #!/bin/bash
+echo "running plan and preprocess!"
 
 if [ -z "$1" ];
-do
+then
   echo "Please pass as first argument to $0 a directory that contains ./raw/"
   exit
 fi
 
 if ! [ -d "$1/raw"];
-do
+then
   echo "Please make sure that $1/raw/ exists"
   exit
 fi

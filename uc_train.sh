@@ -1,13 +1,13 @@
 #!/bin/bash
 
 if [ -z "$1" ];
-do
+then
   echo "Please pass as first argument to $0 a directory that contains ./preprocessed/"
   exit
 fi
 
 if ! [ -d "$1/preprocessed"];
-do
+then
   echo "Please make sure that $1/preprocessed/ exists"
   exit
 fi
