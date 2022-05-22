@@ -4,7 +4,6 @@ import argparse
 from universalclassifier.paths import default_plans_identifier
 
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("network")
@@ -54,13 +53,6 @@ def main():
                              "running postprocessing on each fold is computationally cheap, but some users have "
                              "reported issues with very large images. If your images are large (>600x600x600 voxels) "
                              "you should consider setting this flag.")
-    # parser.add_argument("--interp_order", required=False, default=3, type=int,
-    #                     help="order of interpolation for segmentations. Testing purpose only. Hands off")
-    # parser.add_argument("--interp_order_z", required=False, default=0, type=int,
-    #                     help="order of interpolation along z if z is resampled separately. Testing purpose only. "
-    #                          "Hands off")
-    # parser.add_argument("--force_separate_z", required=False, default="None", type=str,
-    #                     help="force_separate_z resampling. Can be None, True or False. Testing purpose only. Hands off")
     parser.add_argument('--val_disable_overwrite', action='store_false', default=True,
                         help='Validation does not overwrite existing segmentations')
     parser.add_argument('--disable_next_stage_pred', action='store_true', default=False,

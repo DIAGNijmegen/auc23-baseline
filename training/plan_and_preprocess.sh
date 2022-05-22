@@ -1,0 +1,21 @@
+#!/bin/bash
+
+if [ -z "$1" ];
+do
+  echo "Please pass as first argument to $0 a directory that contains ./raw/"
+  exit
+fi
+
+if ! [ -d "$1/raw"];
+do
+  echo "Please make sure that $1/raw/ exists"
+  exit
+fi
+
+mkdir -p "$1/preprocessed"
+
+export nnUNet_raw_data_base="$1/raw"
+export nnUNet_preprocessed="$1/preprocessed"
+#export RESULTS_FOLDER="$1/trained_models"
+
+python3 plan_and_preprocess.py ${@:2}
