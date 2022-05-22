@@ -6,7 +6,7 @@ then
   exit
 fi
 
-if ! [ -d "$1/preprocessed"];
+if ! [ -d "$1/preprocessed" ];
 then
   echo "Please make sure that $1/preprocessed/ exists"
   exit

@@ -1,5 +1,4 @@
 #!/bin/bash
-echo "running plan and preprocess!"
 
 if [ -z "$1" ];
 then
@@ -7,7 +6,7 @@ then
   exit
 fi
 
-if ! [ -d "$1/raw"];
+if ! [ -d "$1/raw" ];
 then
   echo "Please make sure that $1/raw/ exists"
   exit
