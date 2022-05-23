@@ -39,7 +39,6 @@ def add_segmentations_to_dataset_json(dataset_json):
             "0": "background",
             "1": "foreground",
         }
-    print("Done.")
     return dataset_json
 
 

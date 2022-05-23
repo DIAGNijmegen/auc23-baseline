@@ -76,6 +76,7 @@ def main(args):
         task_name = convert_id_to_task_name(i)
 
         raw_folder = join(nnUNet_raw_data, task_name)
+        print("Adding empty segmentations to task folder if no segmentations are present...", flush=True)
         utils.add_segmentations_to_task_folder(raw_folder)
         if verify_dataset_integrity:
             verify_dataset_integrity_original_function(raw_folder)
