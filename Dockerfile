@@ -4,6 +4,7 @@
 FROM pytorch/pytorch
 
 RUN apt-get update
+RUN apt-get install -y git-core
 RUN groupadd -r uc && useradd -m --no-log-init -r -g uc uc
 
 RUN mkdir -p /opt/uc /input /output \
@@ -18,6 +19,8 @@ ENV PATH="/home/uc/.local/bin:${PATH}"
 RUN python -m pip install --user -U pip
 
 COPY --chown=uc:uc requirements.txt /opt/uc/
+# using git+https://github.com/DIAGNijmegen/nnUNet.git==1.7.0-4 instead of nnunet package to run on SOL.
+# If you won't run on SOL, you can instead use nnunet
 RUN python -m pip install --user -r requirements.txt
 
 COPY --chown=uc:uc universalclassifier/ /opt/uc/universalclassifier

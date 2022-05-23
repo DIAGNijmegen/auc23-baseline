@@ -1,2 +1,2 @@
 matplotlib==3.3.4
-nnunet==1.7.0
+git+https://github.com/DIAGNijmegen/nnUNet.git
