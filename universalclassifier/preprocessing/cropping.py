@@ -82,7 +82,7 @@ class ClassificationImageCropper(ImageCropper):
         data, seg, bbox = crop_to_seg(data, seg, nonzero_label=-1)  # does not replace crop_to_nonzero
         shape_after_crop_to_seg = data.shape
         print("before crop to roi:", shape_after, "after crop to roi:", shape_after_crop_to_seg, "spacing:",
-              np.array(properties["original_spacing"]), "\n")
+              np.array(properties["original_spacing"]), "\n", flush=True)
 
         properties["crop_bbox"] = bbox
         seg[seg < -1] = 0

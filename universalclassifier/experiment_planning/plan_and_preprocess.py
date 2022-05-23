@@ -79,8 +79,10 @@ def main(args):
         print("Adding empty segmentations to task folder if no segmentations are present...", flush=True)
         utils.add_segmentations_to_task_folder(raw_folder)
         if verify_dataset_integrity:
+            print("Verifying dataset integrity...", flush=True)
             verify_dataset_integrity_original_function(raw_folder)
 
+        print("Cropping...", flush=True)
         crop(task_name, False, tf)
 
         tasks.append(task_name)
