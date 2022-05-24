@@ -191,7 +191,7 @@ Running consists of three steps: [preprocessing and experiment planning](#prepro
 To run preprocessing on SOL, you can run the following command:
 ```
 ~/c-submit --require-mem=30g --require-cpus=$NUMCPUS \
-    --priority=low somesoluser luukboulogne 168 \
+    --priority=low luukboulogne 9603 168 \
     doduo1.umcn.nl/universalclassifier/training:latest uc_plan_and_preprocess.sh \
     /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
     -t $TASKID -tf $NUMCPUS -tl $NUMCPUS
@@ -206,9 +206,10 @@ Notes:
 ### Training
 To run training on SOL, you can run the following command:
 ```
-~/c-submit --require-mem=30g --require-cpus=$NUMCPUS \
-    --priority=low somesoluser luukboulogne 168 \
-    doduo1.umcn.nl/universalclassifier/training:latest train_on_sol.sh \
+~/c-submit --require-gpu-mem="11G" --gpu-count="1" \
+    --require-mem="30G" --require-cpus="4" \
+    --priority=low luukboulogne 9603 168 \
+    doduo1.umcn.nl/universalclassifier/training:latest uc_train_on_sol.sh \
     /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
     $TASKID $FOLD
 ```
@@ -224,8 +225,8 @@ To run inference on SOL, you can run the following command:
 
 ```
 ~/c-submit --require-mem=30g --require-cpus=$NUMCPUS \
-    --priority=low somesoluser luukboulogne 168 \
-    doduo1.umcn.nl/universalclassifier/training:latest predict.sh \
+    --priority=low luukboulogne 9603 168 \
+    doduo1.umcn.nl/universalclassifier/training:latest uc_predict.sh \
     -i /path/to/input_images \
     -s /path/to/input_roi_segmentations \
     -o /path/to/output \
