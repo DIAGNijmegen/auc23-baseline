@@ -1,5 +1,6 @@
 
 import shutil
+import nnunet.utilities.shutil_sol as shutil_sol
 from batchgenerators.utilities.file_and_folder_operations import join, isdir, maybe_mkdir_p
 from nnunet.configuration import default_num_threads
 from nnunet.paths import nnUNet_raw_data, nnUNet_cropped_data, preprocessing_output_dir
@@ -21,4 +22,4 @@ def crop(task_string, override=False, num_threads=default_num_threads, create_du
 
     imgcrop = ClassificationImageCropper(num_threads, cropped_out_dir)
     imgcrop.run_cropping(lists, overwrite_existing=override)
-    shutil.copy(join(nnUNet_raw_data, task_string, "dataset.json"), cropped_out_dir)
+    shutil_sol.copyfile(join(nnUNet_raw_data, task_string, "dataset.json"), cropped_out_dir)

@@ -495,9 +495,8 @@ class ClassifierTrainer(NetworkTrainer):
         del dct['dataset_val']
         save_json(dct, join(self.output_folder, "debug.json"))
 
-        import shutil
-
-        shutil.copy(self.plans_file, join(self.output_folder_base, "plans.pkl"))
+        import nnunet.utilities.shutil_sol as shutil_sol
+        shutil_sol.copyfile(self.plans_file, join(self.output_folder_base, "plans.pkl"))
 
     def run_training(self):
         """

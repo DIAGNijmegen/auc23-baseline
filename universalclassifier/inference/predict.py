@@ -1,4 +1,6 @@
 import shutil
+import nnunet.utilities.shutil_sol as shutil_sol
+
 from typing import Tuple, Union, List
 
 from copy import deepcopy
@@ -61,7 +63,7 @@ def predict_from_folder(model: str, input_folder: str, seg_folder: str, output_f
     :return:
     """
     maybe_mkdir_p(output_folder)
-    shutil.copy(join(model, 'plans.pkl'), output_folder)
+    shutil_sol.copyfile(join(model, 'plans.pkl'), output_folder)
 
     assert isfile(join(model, "plans.pkl")), "Folder with saved model weights must contain a plans.pkl file"
     expected_num_modalities = load_pickle(join(model, "plans.pkl"))['num_modalities']

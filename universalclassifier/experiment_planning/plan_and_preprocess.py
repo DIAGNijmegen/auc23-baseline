@@ -21,6 +21,7 @@ from batchgenerators.utilities.file_and_folder_operations import *
 from universalclassifier.experiment_planning.utils import crop
 
 import shutil
+import nnunet.utilities.shutil_sol as shutil_sol
 from nnunet.utilities.task_name_id_conversion import convert_id_to_task_name
 from nnunet.preprocessing.sanity_checks import verify_dataset_integrity as verify_dataset_integrity_original_function
 from nnunet.training.model_restore import recursive_find_python_class
@@ -110,8 +111,8 @@ def main(args):
 
         print("Copying...", flush=True)
         maybe_mkdir_p(preprocessing_output_dir_this_task)
-        shutil.copy(join(cropped_out_dir, "dataset_properties.pkl"), preprocessing_output_dir_this_task)
-        shutil.copy(join(nnUNet_raw_data, t, "dataset.json"), preprocessing_output_dir_this_task)
+        shutil_sol.copyfile(join(cropped_out_dir, "dataset_properties.pkl"), preprocessing_output_dir_this_task)
+        shutil_sol.copyfile(join(nnUNet_raw_data, t, "dataset.json"), preprocessing_output_dir_this_task)
 
         threads = (tl, tf)
 
