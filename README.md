@@ -1,6 +1,10 @@
 # Training Example 
 
-This repo contains preprocessing, training, and inference code for a universal 3D classifier (UC). It is heavily based on the [nnUnet](https://github.com/MIC-DKFZ/nnUNet) code base. More specifically, to make it work on SOL (the cluster at DIAG), it's based [DIAG's nnUnet fork](https://github.com/DIAGNijmegen/nnunet). As an classification framework, it uses the [I3D model](https://github.com/hassony2/kinetics_i3d_pytorch) instead of a Unet. 
+This repo contains preprocessing, training, and inference code for a universal 3D classifier (UC). It is heavily based on the [nnUnet](https://github.com/MIC-DKFZ/nnUNet) code base. More specifically, to make it work on SOL (the cluster at DIAG), it's based [DIAG's nnUnet fork](https://github.com/DIAGNijmegen/nnunet). It furthermore uses the [I3D model](https://github.com/hassony2/kinetics_i3d_pytorch). 
+
+Feel free to join the discussion about this codebase in the [Universal 3D Classifier channel on Teams](https://teams.microsoft.com/l/channel/19%3a7c2d62ff6c4a4d3c9d7a8b9e2d857571%40thread.tacv2/Universal%25203D%2520classifier?groupId=97a88c45-447f-4147-9e80-5e7c013f7501&tenantId=b208fe69-471e-48c4-8d87-025e9b9a157f).
+
+If you experience any issues with this codebase, please let us know in the [Teams channel](https://teams.microsoft.com/l/channel/19%3a7c2d62ff6c4a4d3c9d7a8b9e2d857571%40thread.tacv2/Universal%25203D%2520classifier?groupId=97a88c45-447f-4147-9e80-5e7c013f7501&tenantId=b208fe69-471e-48c4-8d87-025e9b9a157f) or open an issue on GitHub. 
 
 ## Table of Contents
 * [Dataset format](#datasetformat)
@@ -9,6 +13,8 @@ This repo contains preprocessing, training, and inference code for a universal 3
   * [Training](#training)
   * [Inference](#inference)
 * [Building, pushing and exporting the Docker container](#buildpushexport)
+* [Running outside of docker](#running-outside-of-docker)
+* [Adding to this codebase](#adding)
 
 <a id="datasetformat"></a>
 ## Dataset format
@@ -176,28 +182,6 @@ Example:
 ```
 
 
-
-<a id="buildpushexport"></a>
-## Building, pushing, and exporting your training container 
-*DIAG specific: You don't have to build push or export the container to run it on SOL. To run the universal classifier, you can skip straight to [How to run on SOL](#howtorunonsol)*
-
-<a name="building"></a>
-### Building
-To test if your system is set up correctly, you can run
-
-`./build.sh $VERSION`.
-
-This build command is already contained in the scripts for [pushing](#pushing) and [exporting](#exporting).
-
-<a name="pushing"></a>
-### *Pushing (DIAG specific)*
-*Run `./push.sh $VERSION` to build the Docker image and push it to doduo.*
-
-<a name="exporting"></a>
-### Exporting
-Run `export.sh`/`export.bat` to save the Docker image to `./universalclassifier_training_v$VERSION.tar.gz`. This script also includes `build.sh $VERSION`.
-
-
 <a id="howtorunonsol"></a>
 ## How to run on SOL
 Running consists of three steps: [preprocessing and experiment planning](#preprocessing), [training](#training), and [inference](#inference).
@@ -251,9 +235,36 @@ Notes:
 - Please remove the `-s /path/to/input_roi_segmentations` if you did not provide input segmentations during training.
 - `/path/to/input_images` should have a flat folder structure (no subdirectories). The filenames in it (and optionally in `/path/to/input_roi_segmentations`) should follow the same format described as [imagesTr](#imagesTr) (and optionally [labelsTr](#labelsTr)).
 
-### Running outside of docker
+
+<a id="buildpushexport"></a>
+## Building, pushing, and exporting your training container 
+*DIAG specific: You don't have to build push or export the container to run it on SOL. Instead, you can immediately [run the already pushed version on SOL](#howtorunonsol)*
+
+<a name="building"></a>
+### Building
+To test if your system is set up correctly, you can run
+
+`./build.sh $VERSION`.
+
+This build command is already contained in the scripts for [pushing](#pushing) and [exporting](#exporting).
+
+<a name="pushing"></a>
+### *Pushing (DIAG specific)*
+*Run `./push.sh $VERSION` to build the Docker image and push it to doduo.*
+
+<a name="exporting"></a>
+### Exporting
+Run `export.sh`/`export.bat` to save the Docker image to `./universalclassifier_training_v$VERSION.tar.gz`. This script also includes `build.sh $VERSION`.
+
+
+<a name="running-outside-of-docker"></a>
+## Running outside of docker
 To run the code in this repo outside of docker, you can call  `./uc_plan_and_preprocess.py`, `./uc_train.py`, and `./uc_predict.py` directly. These implement the universalclassifier version of the similarly named nnunet commands. 
 
 Before doing so, please make sure to first add environment variables for your raw data, preprocessed data and results folder. Examples for setting the environment variables can be found in `./uc_plan_and_preprocess.sh`, `./uc_train.sh`, and `./uc_predict.sh`.
 
  See the [original nnUNet documentation](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/setting_up_paths.md) for more details about the environment variables.
+ 
+<a name="adding"></a>
+## Adding to the codebase
+Feel free to open an issue on GitHub or start a pull request. Also, feel free to join our disussions about this codebase in the [Universal 3D Classifier channel on Teams](https://teams.microsoft.com/l/channel/19%3a7c2d62ff6c4a4d3c9d7a8b9e2d857571%40thread.tacv2/Universal%25203D%2520classifier?groupId=97a88c45-447f-4147-9e80-5e7c013f7501&tenantId=b208fe69-471e-48c4-8d87-025e9b9a157f).
