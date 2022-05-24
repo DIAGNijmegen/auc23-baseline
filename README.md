@@ -1,154 +1,259 @@
 # Training Example 
 
-This folder contains a universal classifier for volumetric data. 
-It expects the dataset to be available 
+This repo contains preprocessing, training, and inference code for a universal 3D classifier (UC). It is heavily based on the [nnUnet](https://github.com/MIC-DKFZ/nnUNet) code base. More specifically, to make it work on SOL (the cluster at DIAG), it's based [DIAG's nnUnet fork](https://github.com/DIAGNijmegen/nnunet). As an classification framework, it uses the [I3D model](https://github.com/hassony2/kinetics_i3d_pytorch) instead of a Unet. 
 
 ## Table of Contents
-* [Datset format](#datasetformat)
-* [Building, testing and exporting your training container](#buildtestexport)
-* [Implementing your own training algorithm](#implementing)
+* [Dataset format](#datasetformat)
+* [How to run on SOL](#howtorunonsol)
+  * [Preprocessing and experiment planning](#preprocessing)
+  * [Training](#training)
+  * [Inference](#inference)
+* [Building, pushing and exporting the Docker container](#buildpushexport)
 
 <a id="datasetformat"></a>
-## Dataset format 
-The format and instructions below are largely copied from the format and instructions from [nnUnet](https://github.com/MIC-DKFZ/nnUNet/blob/master/nnunet/), which in turn is largely copied from the format used by the Medical Segmentation Decathlon (MSD).
- 
-Each classification dataset is stored as a separate 'Task'. Tasks are associated with a task ID, a three digit integer (this is different from the MSD!) and a task name (which you can freely choose): Task010_PancreaticCancer has 'PancreaticCancer' as task name and the task id is 10. Tasks are stored in the `nnUnet_raw_data` folder like this:
+## Dataset format
+The format and instructions below are largely copied from the format and instructions from [nnUnet](https://github.com/MIC-DKFZ/nnUNet/blob/master/nnunet/), which in turn is largely copied from the format used by the [Medical Segmentation Decathlon](http://medicaldecathlon.com/) (MSD):
+
+The entry point to universal classifier is the `raw_data_base/` folder. 
+
+*DIAG specific: On Chansey, the `nnUNet_raw_data_base/` folder for for the universal classifier datasets is found here: `/mnt/netcache/bodyct/experiments/universal_classifier_t9603/data/raw/`. Please use this directory for storing your experiment data.*
+
+Each classification dataset is stored here as a separate 'Task'. Tasks are associated with a task ID, a three digit integer (this is different from the MSD!) and a task name (which you can freely choose): Task010_PancreaticCancer has 'PancreaticCancer' as task name and the task id is 10. Tasks are stored in the `raw_data_base/nnUnet_raw_data/` folder like this:
  
 ```
 nnUNet_raw_data/
-├── Task001_COVID19Severity
-├── Task002_LungNoduleMalignancy
+├── Task001_COVID19Severity/
+├── Task002_LungNoduleMalignancy/
 ...
-└── Task010_PancreaticCancer
+└── Task010_PancreaticCancer/
 ```
-On Chansey, this folder is found here:
-```/mnt/netcache/bodyct/experiments/universal_classifier_t9603/data/universal_classifier_raw_data/```
+
 
 Within each task folder, the following structure is expected:
  ```
 Task001_COVID19Severity/
-├── ImagesTr
-├── (ImagesTs)
+├── imagesTr/
+├── (labelsTr/)
+├── (imagesTs/)
+├── (labelsTs/)
 └── dataset.json
 ```
-###ImagesTr:
-Training images. 
-The image files can have any scalar type. 
-Images may have multiple modalities. Imaging modalities are identified by their suffix: a four-digit integer at the end of the filename. Imaging files must therefore follow the following naming convention: case_identifier_XXXX.nii.gz. Hereby, XXXX is the modality identifier. What modalities these identifiers belong to is specified in the dataset.json file (see below).
-For data from multiple modalities and/or constructed from multiple slices: For each training case, all images must have the same geometry to ensure that their pixel arrays are aligned. Also make sure that all your data are co-registered!
-Example:
-```
-Task001_COVID19Severity/
-├── ImagesTr
-|   ├── covid19severity_0003_0000.nii.gz
-|   ... 
-|   └── covid19severity_8192_0000.nii.gz
-├── ImagesTs
-└── dataset.json
-```
- 
+Here, the `labelsTr` , `imagesTs`, `labelsTs` directries are optional. The rest of this section describes how to structure the [`imagesTr`](#imagesTr), [`labelsTr`](#labelsTr), [`imagesTs`](#imagesTs), and [`labelsTs`](#labelsTs) directories, as well as the [`dataset.json`](dataset.json) file.
 
-###ImagesTs: 
-ImagesTs (optional) contains the images that belong to the test cases. The file names and data follows the same format as the data in ImagesTr.
+<a id="imagesTr"></a>
+### imagesTr:
+This directory contains your training images. The image files can have any scalar type. 
+
+Images may have multiple modalities. Imaging modalities are identified by their suffix: a four-digit integer at the end of the filename. Imaging files must therefore follow the following naming convention: `case_identifier_XXXX.nii.gz`. Hereby, `XXXX` is the modality identifier. What modalities these identifiers belong to is specified in the `dataset.json` file (see below).
+
+For data from multiple modalities and/or constructed from multiple slices: For each training case, all images must have the same geometry to ensure that their pixel arrays are aligned. Also make sure that all your data are co-registered!
+
+Example for two modalities:
+```
+Task004_ProstateCancer/
+├── imagesTr
+|   ├── prostatecancer_0001_0000.nii.gz
+|   ├── prostatecancer_0001_0001.nii.gz
+|   ├── prostatecancer_0002_0000.nii.gz
+|   ├── prostatecancer_0002_0001.nii.gz
+|   ... 
+|   ├── prostatecancer_0142_0000.nii.gz
+|   └── prostatecancer_0142_0001.nii.gz
+└── dataset.json
+```
+
+<a id="labelsTr"></a>
+### labelsTs:
+The universal classifier optionally receives segmentations of the region of interest (ROI) as additional input. They must contain segmentation maps that contain consecutive integers, starting with 0: 0, 1, 2, 3, ... num_labels. 0 is considered background.
+```
+Task012_ProstateCancer/
+├── imagesTr
+|   ├── prostatecancer_0001_0000.nii.gz
+|   ├── prostatecancer_0001_0001.nii.gz
+|   ├── prostatecancer_0002_0000.nii.gz
+|   ├── prostatecancer_0002_0001.nii.gz
+|   ... 
+|   ├── prostatecancer_0142_0000.nii.gz
+|   └── prostatecancer_0142_0001.nii.gz
+├── labelsTr
+|   ├── prostatecancer_0001.nii.gz
+|   ├── prostatecancer_0002.nii.gz
+|   ... 
+|   └── prostatecancer_0142.nii.gz
+└── dataset.json
+```
+When ROI segmentations are provided, the universal classifier:
+- performs an additional preprocessing step, where it crops to the region of interest with a 5% margin around the segmentation mask.  
+- feeds the ROI segmentation mask as additional input to the model.
+
+When ROI segmentation masks are not provided, the universal classifier generates empty ROI segmentation masks (only foreground) and then uses those as input the the nnunet preprocessing pipeline. The empty masks will also be fed into the classifier as additional input.
+
+Note that: 
+- The ROI segmentation maps must have the same geometry as the data in `imagesTr` to ensure that their pixel arrays are aligned. 
+- When ROI segmentation masks are provided during training, they must also be provided during inference. If they are not provided during training, they must also not be provided during inference.
+
+
+<a id="imagesTs"></a>
+### imagesTs: 
+`imagesTs` (optional) contains the images that belong to the test cases. The file names and data follows the same format as the data in [`imagesTr`](#imagesTr).
+
+<a id="imagesTs"></a>
+### labelsTs: 
+`labelsTs` (optional) contains the region of interest (ROI) segmentations that belong to the test cases. The file names and data follows the same format as the data in [`labelsTr`](#labelsTr).
+
  
-dataset.json:
-Any classification labels must have consecutive integer values.
+<a id="dataset.json"></a>
+### dataset.json:
+An example of a `dataset.json` is given below. Please note the following: 
+- The modalities listed under "modality" should correspond to the modality identifier as described in [imagesTr](#imagesTr).
+- "classification_labels" is a description of the reference. Each classification label must have consecutive integer values. If multiple classification labels are given, the classifier will be trained on all of them jointly to produce multiple outputs. The "ordinal", field is currently not yet used.
+- "labels" describes the region of interest (ROI) segmentation map input. This field is optional: when no ROI segmentations are provided with your dataset, please do not add the "labels" field. In this case, the universal classifier will generate empty ROI segmentation masks (only foreground) to use, and it will automatically add the "labels" field for these masks. 
+- "training" describes the training dataset. Please leave out the modality identifier when specifying the paths for the training images. For each training case, each of the reference labels in "classification_labels" must also be specified. This "label" field is optional: when no segmentations are provided with your dataset, please do not add the "label" subfield to any of the training cases. In this case, the universal classifier will generate empty ROI segmentation masks (only foreground) to use, and it will add the paths to these images in the dataset.json.
+- "test" is currently unused.
  
 Example:
 ```
-{ 
-  "name": "COVID-19", 
+{
+  "name": "COVID-19",
   "description": "COVID-19 RT-PCR outcome prediction and prediction of severe COVID-19, defined as death or intubation after one month, from CT. This dataset can be downloaded from the Registry of Open Data on AWS: https://registry.opendata.aws/stoic2021-training/.",
-  "reference": "Assistance Publique – Hôpitaux de Paris",
-  "licence":"CC-BY-NC 4.0",
-  "release":"1.0 23-12-2021",
+  "reference": "Assistance Publique \u2013 H\u00f4pitaux de Paris",
+  "licence": "CC-BY-NC 4.0",
+  "release": "1.0 23-12-2021",
   "tensorImageSize": "3D",
-  "modality": { 
+  "modality": {
     "0": "CT"
-  }, 
-  "labels": { 
-    "COVID-19": {
+  },
+  "classification_labels": [
+    {
+      "name": "COVID-19",
       "ordinal": false,
       "values": {
-        "0": "Negative RT-PCR test",
-        "1": "Positive RT-PCR test"
+        "0": "Negative RT-PCR",
+        "1": "Positive RT-PCR"
       }
     },
-    "Severe COVID-19": {
+    {
+      "name": "Severe COVID-19",
       "ordinal": false,
       "values": {
         "0": "Alive and no intubation after one month",
         "1": "Death or intubation after one month"
       }
     }
+  ],
+  "labels": {
+    "0": "background",
+    "1": "left upper lobe",
+    "2": "left lower lobe",
+    "3": "right upper lobe",
+    "4": "right lower lobe",
+    "5": "right middle lobe",
+    "6": "lesions left upper lobe",
+    "7": "lesions left lower lobe",
+    "8": "lesions right upper lobe",
+    "9": "lesions right lower lobe",
+    "10": "lesions right middle lobe"
   },
-  "numTraining": 2000, 
+  "numTraining": 2000,
   "numTest": 0,
   "training": [
     {
-      "image":"./imagesTr/covid19severity_0003_0000.nii.gz",
+      "image":"./imagesTr/covid19severity_0003.nii.gz",
       "COVID-19": 1, 
       "Severe COVID-19": 0
+      "label":"./labelsTr/covid19severity_0003.nii.gz",
     },
     ...
     {
-      "image":"./imagesTr/covid19severity_8192_0000.nii.gz",
+      "image":"./imagesTr/covid19severity_8192.nii.gz",
       "COVID-19": 1, 
       "Severe COVID-19": 0
+      "label":"./labelsTr/covid19severity_8192.nii.gz",
     }
   ],
   "test": []
 }
 ```
 
-<a id="buildtestexport"></a>
-## Building, testing, and exporting your training container 
+
+
+<a id="buildpushexport"></a>
+## Building, pushing, and exporting your training container 
+*DIAG specific: You don't have to build push or export the container to run it on SOL. To run the universal classifier, you can skip straight to [How to run on SOL](#howtorunonsol)*
+
+<a name="building"></a>
 ### Building
-To test if your system is set up correctly, you can run `./build.sh` (Linux) or `./build.bat` (Windows), that simply implement this command:
+To test if your system is set up correctly, you can run
 
-```docker build -t stoictrain .```
+`./build.sh $VERSION`.
 
-Please note that the next step (testing the container) also runs a build, so this step is not necessary if you are certain that everything is set up correctly.
+This build command is already contained in the scripts for [pushing](#pushing) and [exporting](#exporting).
 
-<a name="testing"></a>
-### Testing
-To test if the docker container works as expected, make sure that your raw data is in some directory `/path/to/raw/`. 
-
-**Note: Running the following command will delete the current contents of `../inference/artifact/`.**
-
-You can now run:
-
-```bash test.sh /path/to/raw/```
-
-if you are on Linux, or:
-
-```test.bat \path\to\raw\```
-
-if you are on Windows.
-
-`test.sh`/`test.bat` will build the container and train your algorithm with the public training set. It will produce trained model weights in the `../inference/artifact/` directory to be used later for generating the inference Docker container. 
-
-If the test runs successfully, you will see you will see `Training completed.`, and your model weights will have been saved to `../inference/artifact/`.
-
-Note: If you do not have a GPU available on your system, remove the `--gpus all` flag in `test.sh`/`test.bat` to run the test. 
-
+<a name="pushing"></a>
+### *Pushing (DIAG specific)*
+*Run `./push.sh $VERSION` to build the Docker image and push it to doduo.*
 
 <a name="exporting"></a>
 ### Exporting
-Run `export.sh`/`export.bat` to save the Docker image to `./STOICTrain.tar.gz`. This script runs `build.sh`/`build.bat` as well as the following command:
-`docker save stoictrain | gzip -c > STOICTrain.tar.gz`
+Run `export.sh`/`export.bat` to save the Docker image to `./universalclassifier_training_v$VERSION.tar.gz`. This script also includes `build.sh $VERSION`.
 
-Please note that it is not necessary to include the resulting `STOICTrain.tar.gz` file in your submission. The challenge organizers will build and save a new Docker image using your submission. This new Docker image will be used to train your algorithm on the full (public + private) training set.
 
-<a id="implementing"></a>
-## Implementing your own training algorithm
-You can implement your own solution by altering the [main]() function in `./plan_and_preprocess.py` and the [`do_learning`](https://github.com/DIAGNijmegen/universal-classifier-t9603/blob/a9916c6a2a8c075300200e0d0c04dfffe93b0b17/training/train.py#L76) function in `./train.py`. See the documentation of this function in `./train.py` for more information.
+<a id="howtorunonsol"></a>
+## How to run on SOL
+Running consists of three steps: [preprocessing and experiment planning](#preprocessing), [training](#training), and [inference](#inference).
 
-Any additional imported packages needed for inference should be added to `./requirements.txt`, and any additional files and folders you add should be explicitly copied in the `./Dockerfile`. See `./requirements.txt` and `./Dockerfile` for examples. After implementing your own algorithm, make sure that your training codebase is ready for submission by [testing](#testing) it.
+<a id="preprocessing"></a>
+### Preprocessing and experiment planning
+To run preprocessing on SOL, you can run the following command:
+```
+~/c-submit --require-mem=30g --require-cpus=$NUMCPUS \
+    --priority=low somesoluser luukboulogne 168 \
+    doduo1.umcn.nl/universalclassifier/training:latest uc_plan_and_preprocess.sh \
+    /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
+    -t $TASKID -tf $NUMCPUS -tl $NUMCPUS \
+    --planner3d ClassificationExperimentPlanner3D --planner2d None
+```
+Notes:
+- For most datasets, preprocessing should finish within 12 hours.
+- For most datasets, 30G of RAM should be enough.
+- `$TASKID` is the integer identifier associated with your Task name Task`$TASKID`_MYTASK. You can pass several task IDs at once.
+- See `uc_plan_and_preprocess.py` for argument options and descriptions.
 
-Please note that your container will not have access to the internet when executing on grand-challenge.org, so any pre-trained model weights must be present in your container image. You can test this locally using the `--network=none` option of `docker run`.
+<a id="training"></a>
+### Training
+To run training on SOL, you can run the following command:
+```
+~/c-submit --require-mem=30g --require-cpus=$NUMCPUS \
+    --priority=low somesoluser luukboulogne 168 \
+    doduo1.umcn.nl/universalclassifier/training:latest train_on_sol.sh \
+    /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
+    $TASKID $FOLD
+```
+for `$FOLD` in [0, 1, 2, 3, 4].
 
-After implementing your own training Docker container, you can implement your inference container. For this, please refer to [`../inference/README.md`](https://github.com/DIAGNijmegen/universal-classifier-t9603/tree/master/inference).
+Notes:
+- Please make sure to run `uc_train_on_sol.sh` and not `uc_train.sh`! `uc_train.sh` does not first copy the training data to the node on which you are running, so training will be a lot slower. It can slow down I/O for other SOL users as well.
+- See `train.py` for argument options and descriptions.
+
+<a id="inference"></a>
+### Inference
+To run inference on SOL, you can run the following command:
+
+```
+~/c-submit --require-mem=30g --require-cpus=$NUMCPUS \
+    --priority=low somesoluser luukboulogne 168 \
+    doduo1.umcn.nl/universalclassifier/training:latest predict.sh \
+    -i /path/to/input_images \
+    -s /path/to/input_roi_segmentations \
+    -o /path/to/output \
+```
+Notes:
+- Please remove the `-s /path/to/input_roi_segmentations` if you did not provide input segmentations during training.
+- `/path/to/input_images` should have a flat folder structure (no subdirectories). The filenames in it (and optionally in `/path/to/input_roi_segmentations`) should follow the same format described as [imagesTr](#imagesTr) (and optionally [labelsTr](#labelsTr)).
 
 ### Running outside of docker
-To run the code in this repo outside of docker, first add environment variables ofr your raw data, preprocessed data and results folder. See the [original nnUNet documentation](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/setting_up_paths.md) for more details. An example for setting the environment variables can be found in `./run_local.sh`:
+To run the code in this repo outside of docker, you can call  `./uc_plan_and_preprocess.py`, `./uc_train.py`, and `./uc_predict.py` directly. These implement the universalclassifier version of the similarly named nnunet commands. 
+
+Before doing so, please make sure to first add environment variables for your raw data, preprocessed data and results folder. Examples for setting the environment variables can be found in `./uc_plan_and_preprocess.sh`, `./uc_train.sh`, and `./uc_predict.sh`.
+
+ See the [original nnUNet documentation](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/setting_up_paths.md) for more details about the environment variables.
