@@ -6,7 +6,7 @@ then
   exit
 fi
 
-if ! [ -d "$1/raw" ];
+if ! [ -d "$1/trained_models" ];
 then
   echo "Please make sure that $1/trained_models/ exists"
   exit
