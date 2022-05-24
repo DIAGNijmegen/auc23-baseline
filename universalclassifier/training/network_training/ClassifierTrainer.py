@@ -87,9 +87,6 @@ class ClassifierTrainer(NetworkTrainer):
         self.pin_memory = True
 
 
-        self.num_batches_per_epoch = 2 #debugging purposes
-        self.num_val_batches_per_epoch = 2 #debugging purposes
-
 
     def update_fold(self, fold):
         """
