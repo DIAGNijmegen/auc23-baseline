@@ -1,7 +1,7 @@
 import argparse
 from nnunet.utilities.task_name_id_conversion import convert_id_to_task_name
 import os
-import shutil
+import nnunet.utilities.shutil_sol as shutil_sol
 
 # Currently copies all plans folders for the task.
 def main():
@@ -23,7 +23,7 @@ def main():
     os.makedirs(dst, exist_ok=True)
     print(f"Copying preprocessed data from {src} into container...")
 
-    shutil.copytree(src, dst, dirs_exist_ok=True)
+    shutil_sol.copytree(src, dst)
 
 
 if __name__ == "__main__":
