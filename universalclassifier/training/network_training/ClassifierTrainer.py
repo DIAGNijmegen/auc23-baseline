@@ -325,7 +325,6 @@ class ClassifierTrainer(NetworkTrainer):
 
 
     def run_iteration(self, data_generator, do_backprop=True, run_online_evaluation=False):
-        print("new batch")  # debugging purposes
         """
         gradient clipping improves training stability
         :param data_generator:
