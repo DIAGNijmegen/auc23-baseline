@@ -7,8 +7,8 @@ RUN apt-get update
 RUN apt-get install -y git-core
 RUN groupadd -r uc && useradd -m --no-log-init -r -g uc uc
 
-RUN mkdir -p /opt/uc /input /output \
-    && chown uc:uc /opt/uc /input /output
+RUN mkdir -p /opt/uc /input /output /preprocessed \
+    && chown uc:uc /opt/uc /input /output /preprocessed
 
 USER uc
 
