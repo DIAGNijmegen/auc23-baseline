@@ -18,4 +18,5 @@ export nnUNet_raw_data_base="$1/raw"
 export nnUNet_preprocessed="$1/preprocessed"
 export RESULTS_FOLDER="$1/trained_models"
 
+echo running "python3 uc_train.py ${@:2}"
 python3 uc_train.py ${@:2}
