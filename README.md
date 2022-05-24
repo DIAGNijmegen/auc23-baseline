@@ -211,7 +211,7 @@ To run training on SOL, you can run the following command:
     --priority=low luukboulogne 9603 168 \
     doduo1.umcn.nl/universalclassifier/training:latest uc_train_on_sol.sh \
     /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
-    $TASKID $FOLD
+    3d_fullres ClassifierTrainer $TASKID $FOLD
 ```
 for `$FOLD` in [0, 1, 2, 3, 4].
 
