@@ -10,13 +10,10 @@ def parse_args():
                              " experiment planning and preprocessing for. Each of these "
                              "ids must, have a matching folder 'TaskXXX_' in the raw "
                              "data folder")
-    parser.add_argument("-pl3d", "--planner3d", type=str, default="ExperimentPlanner3D_v21",
-                        help="Name of the ExperimentPlanner class for the full resolution 3D U-Net and U-Net cascade. "
-                             "Default is ExperimentPlanner3D_v21. Can be 'None', in which case these U-Nets will not be "
-                             "configured")
-    parser.add_argument("-pl2d", "--planner2d", type=str, default="ExperimentPlanner2D_v21",
-                        help="Name of the ExperimentPlanner class for the 2D U-Net. Default is ExperimentPlanner2D_v21. "
-                             "Can be 'None', in which case this U-Net will not be configured")
+    parser.add_argument("-pl3d", "--planner3d", type=str, default="ClassificationExperimentPlanner3D",
+                        help="Name of the ExperimentPlanner class. Default is ClassificationExperimentPlanner3D.")
+    parser.add_argument("-pl2d", "--planner2d", type=str, default="None",
+                        help="Not implemented")
     parser.add_argument("-no_pp", action="store_true",
                         help="Set this flag if you dont want to run the preprocessing. If this is set then this script "
                              "will only run the experiment planning and create the plans file")
@@ -28,8 +25,8 @@ def parse_args():
                         help="Number of processes used for preprocessing the full resolution data of the 2D U-Net and "
                              "3D U-Net. Don't overdo it or you will run out of RAM")
     parser.add_argument("--verify_dataset_integrity", required=False, default=False, action="store_true",
-                        help="set this flag to check the dataset integrity. This is useful and should be done once for "
-                             "each dataset!")
+                        help="Not implmented yet for universal classifier. Set this flag to check the dataset "
+                             "integrity. This is useful and should be done once for each dataset!")
     parser.add_argument("-overwrite_plans", type=str, default=None, required=False,
                         help="Use this to specify a plans file that should be used instead of whatever nnU-Net would "
                              "configure automatically. This will overwrite everything: intensity normalization, "

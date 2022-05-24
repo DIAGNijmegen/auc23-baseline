@@ -194,8 +194,7 @@ To run preprocessing on SOL, you can run the following command:
     --priority=low somesoluser luukboulogne 168 \
     doduo1.umcn.nl/universalclassifier/training:latest uc_plan_and_preprocess.sh \
     /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
-    -t $TASKID -tf $NUMCPUS -tl $NUMCPUS \
-    --planner3d ClassificationExperimentPlanner3D --planner2d None
+    -t $TASKID -tf $NUMCPUS -tl $NUMCPUS
 ```
 Notes:
 - For most datasets, preprocessing should finish within 12 hours.
@@ -230,6 +229,7 @@ To run inference on SOL, you can run the following command:
     -i /path/to/input_images \
     -s /path/to/input_roi_segmentations \
     -o /path/to/output \
+    -t $TASKID
 ```
 Notes:
 - Please remove the `-s /path/to/input_roi_segmentations` if you did not provide input segmentations during training.
