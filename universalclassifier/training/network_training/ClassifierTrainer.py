@@ -81,7 +81,7 @@ class ClassifierTrainer(NetworkTrainer):
         self.lr_scheduler_patience = 30
         self.weight_decay = 3e-5
 
-        self.max_num_epochs = 1000
+        self.max_num_epochs = 200 #1000
         self.initial_lr = 1e-2
 
         self.pin_memory = True

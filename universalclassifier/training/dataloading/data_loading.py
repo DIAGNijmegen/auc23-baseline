@@ -49,10 +49,12 @@ class DataLoader3D(SlimDataLoaderBase):
 
             # cases are stored as npz, but we require unpack_dataset to be run. This will decompress them into npy
             # which is much faster to access
+            #print(f"Loading data: {self._data[i]['data_file'][:-4]}") # Debugging purposes
             if isfile(self._data[i]['data_file'][:-4] + ".npy"):
                 case_all_data = np.load(self._data[i]['data_file'][:-4] + ".npy", self.memmap_mode)
             else:
                 case_all_data = np.load(self._data[i]['data_file'])['data']
+            #print(f"Loaded data: {self._data[i]['data_file'][:-4]}") # Debugging purposes
 
             data[j] = case_all_data[:-1]
             seg[j, 0] = case_all_data[-1:]

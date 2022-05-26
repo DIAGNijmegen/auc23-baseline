@@ -1,5 +1,6 @@
 
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
+from batchgenerators.dataloading.single_threaded_augmenter import SingleThreadedAugmenter
 from batchgenerators.transforms.abstract_transforms import Compose
 from batchgenerators.transforms.channel_selection_transforms import DataChannelSelectionTransform, \
     SegChannelSelectionTransform
@@ -109,6 +110,7 @@ def get_moreDA_augmentation(dataloader_train, dataloader_val, patch_size, params
     tr_transforms.append(NumpyToTensor(['data'], 'float'))
     tr_transforms.append(NumpyToTensor(['target'], 'long'))  # also works for converting list of arrays to list of tensors
     tr_transforms = Compose(tr_transforms)
+
 
     if use_nondetMultiThreadedAugmenter:
         if NonDetMultiThreadedAugmenter is None:
