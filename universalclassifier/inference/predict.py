@@ -80,9 +80,11 @@ def predict_from_folder(model: str, input_folder: str, seg_folder: str, output_f
         seg_files = [None] * len(case_ids)
     else:
         seg_files = subfiles(seg_folder, suffix=".nii.gz", join=False, sort=True)
-        if not all([d[0].split('_')[0] + '.nii.gz' == s for d, s in zip(list_of_lists, seg_files)]):
+        expected_segfiles = [[d[0].rsplit('_')[0] + '.nii.gz' for d in list_of_lists]]
+        if not all([f in seg_files for f in expected_segfiles]):
             raise RuntimeError(f"Please make sure that for each case ID in {input_folder} a corresponding case ID "
-                               f"exists in {seg_folder} and vice versa.")
+                               f"exists in {seg_folder}.")
+        seg_files = expected_segfiles
     return predict_cases(model, list_of_lists, seg_files, output_files, folds, mixed_precision=mixed_precision,
                          overwrite_existing=overwrite_existing, checkpoint_name=checkpoint_name)
 
