@@ -234,8 +234,9 @@ To run inference on SOL, you can run the following command:
     -t $TASKID
 ```
 Notes:
-- Please remove the `-s /path/to/input_roi_segmentations` if you did not provide input segmentations during training.
+- ! Make sure to remove the `-s /path/to/input_roi_segmentations` if you did not provide input segmentations during training.
 - `/path/to/input_images` should have a flat folder structure (no subdirectories). The filenames in it (and optionally in `/path/to/input_roi_segmentations`) should follow the same format described as [imagesTr](#imagesTr) (and optionally [labelsTr](#labelsTr)).
+- 
 
 
 <a id="buildpushexport"></a>
