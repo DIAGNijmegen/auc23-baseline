@@ -216,9 +216,9 @@ To run training on SOL, you can run the following command:
 for `$FOLD` in [0, 1, 2, 3, 4].
 
 Notes:
-- The validation step is not yet implemented. It currently trainer.validate(), but you can still run inference after training 
 - Please make sure to run `uc_train_on_sol.sh` and not `uc_train.sh`! `uc_train.sh` does not first copy the training data to the node on which you are running, so training will be a lot slower. It can slow down I/O for other SOL users as well.
 - See `uc_train.py` for argument options and descriptions.
+- The validation step (`trainer.validate()`) is not yet implemented.  
 
 <a id="inference"></a>
 ### Inference
