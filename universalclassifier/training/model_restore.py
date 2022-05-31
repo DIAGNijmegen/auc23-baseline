@@ -37,6 +37,12 @@ def restore_model(pkl_file, checkpoint=None, train=False, fp16=None):
     """
     info = load_pickle(pkl_file)
     init = info['init']
+    # Debugging
+    print(init)
+    if len(init) == 7:
+        print("Only 7 arguments in init. Adding stage=None as 5th argument.")
+        init = init[:4] + (None,) + init[4:]
+    # end debugging
     name = info['name']
     search_in = join(universalclassifier.__path__[0], "training", "network_training")
     tr = recursive_find_python_class([search_in], name, current_module="universalclassifier.training.network_training")
