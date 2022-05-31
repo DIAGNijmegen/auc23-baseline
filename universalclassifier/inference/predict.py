@@ -84,7 +84,7 @@ def predict_from_folder(model: str, input_folder: str, seg_folder: str, output_f
         if not all([f in seg_files for f in expected_segfiles]):
             raise RuntimeError(f"Please make sure that for each case ID in {input_folder} a corresponding case ID "
                                f"exists in {seg_folder}.")
-        seg_files = expected_segfiles
+        seg_files = [join(seg_folder, f) for f in expected_segfiles]
     return predict_cases(model, list_of_lists, seg_files, output_files, folds, mixed_precision=mixed_precision,
                          overwrite_existing=overwrite_existing, checkpoint_name=checkpoint_name)
 
