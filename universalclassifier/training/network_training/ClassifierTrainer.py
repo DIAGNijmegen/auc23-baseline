@@ -291,17 +291,17 @@ class ClassifierTrainer(NetworkTrainer):
 
                 data = self.rescale_segmentation_channel(data)
 
-                pred, softmax_pred = self.predict_preprocessed_data_return_pred_and_softmax(data[None], self.fp16)[1]
+                pred, logits = self.predict_preprocessed_data_return_pred_and_logits(data[None], self.fp16)[1]
 
-                np.save(save_fname, softmax_pred)
+                np.save(save_fname, logits)
 
             # TODO: save pred-gt pairs here
         # TODO: compute performance and save it here
 
         self.network.train(current_mode)
 
-    def predict_preprocessed_data_return_pred_and_softmax(self, data: np.ndarray,
-                                                          mixed_precision: bool) -> Tuple[List, List]:
+    def predict_preprocessed_data_return_pred_and_logits(self, data: np.ndarray,
+                                                         mixed_precision: bool) -> Tuple[List, List]:
         valid = list((I3D,))
         assert isinstance(self.network, tuple(valid))
 
@@ -317,9 +317,10 @@ class ClassifierTrainer(NetworkTrainer):
         if torch.cuda.is_available():
             data = to_cuda(data)
 
+        print(data.shape)
         with context():
             with torch.no_grad():
-                ret = [softmax_helper(output.cpu()).numpy() for output in self.network(data)]
+                ret = [output.cpu().numpy() for output in self.network(data)]
         self.network.train(current_mode)
         return [np.argmax(x) for x in ret], ret
 
@@ -554,6 +555,8 @@ class ClassifierTrainer(NetworkTrainer):
         d, s, properties = preprocessor.preprocess_test_case(input_files,
                                                              self.plans['plans_per_stage'][self.stage][
                                                                  'current_spacing'],
+                                                             self.plans['plans_per_stage'][self.stage][
+                                                                 'image_size'],
                                                              seg_file)
         return d, s, properties
 
@@ -565,11 +568,12 @@ class ClassifierTrainer(NetworkTrainer):
         :param output_file:
         :return:
         """
+        print(f"Processing {input_files, seg_file}:")
         print("preprocessing...")
         d, s, properties = self.preprocess_patient(input_files, seg_file)
         data = self.combine_data_and_seg(d, s)
         print("predicting...")
-        categorical_output, pred = self.predict_preprocessed_data_return_pred_and_softmax(data[None], self.fp16)[1]  # generates softmax output
+        categorical_output, pred = self.predict_preprocessed_data_return_pred_and_logits(data[None], self.fp16)[1]  # generates logits output
         print("exporting prediction...")
         save_output(categorical_output, pred, output_file, properties)
         print("done")

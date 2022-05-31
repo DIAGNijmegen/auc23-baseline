@@ -27,6 +27,6 @@ if __name__ == "__main__":
     task_folder = "Task001_COVID19Severity"
     plans_folder = "universal_classifier_plans_v1.0_stage0"
     folder = os.path.join(preprocessed_root, task_folder, plans_folder)
-
+    folder = "/home/lhboulogne/Downloads/test/npzs/"
     show_image_channels_for_folder(folder)
 

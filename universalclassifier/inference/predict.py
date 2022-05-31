@@ -80,11 +80,13 @@ def predict_from_folder(model: str, input_folder: str, seg_folder: str, output_f
         seg_files = [None] * len(case_ids)
     else:
         seg_files = subfiles(seg_folder, suffix=".nii.gz", join=False, sort=True)
-        expected_segfiles = [d.rsplit('_')[0] + '.nii.gz' for d in all_files]
+        expected_segfiles = [os.path.basename(d[0]).rsplit('_')[0] + '.nii.gz' for d in list_of_lists]
         if not all([f in seg_files for f in expected_segfiles]):
             raise RuntimeError(f"Please make sure that for each case ID in {input_folder} a corresponding case ID "
                                f"exists in {seg_folder}.")
         seg_files = [join(seg_folder, f) for f in expected_segfiles]
+        print(list_of_lists)
+        print(seg_files)
     return predict_cases(model, list_of_lists, seg_files, output_files, folds, mixed_precision=mixed_precision,
                          overwrite_existing=overwrite_existing, checkpoint_name=checkpoint_name)
 
@@ -122,6 +124,7 @@ def predict_cases(model, list_of_lists_of_modality_filenames, seg_filenames, out
 
         cleaned_output_files = [cleaned_output_files[i] for i in not_done_idx]
         list_of_lists_of_modality_filenames = [list_of_lists_of_modality_filenames[i] for i in not_done_idx]
+        seg_filenames = [seg_filenames[i] for i in not_done_idx]
 
         print("number of cases that still need to be predicted:", len(cleaned_output_files))
 
@@ -134,17 +137,19 @@ def predict_cases(model, list_of_lists_of_modality_filenames, seg_filenames, out
 
     for input_files, seg_file, output_filename in zip(list_of_lists_of_modality_filenames,
                                                       seg_filenames, output_filenames):
+
+        print(f"=== Processing {input_files}, {seg_file}:")
         print("preprocessing...")
         d, s, properties = trainer.preprocess_patient(input_files, seg_file)
         d = trainer.combine_data_and_seg(d, s)
 
         print("predicting...")
         trainer.load_checkpoint_ram(params[0], False)
-        pred = trainer.predict_preprocessed_data_return_pred_and_softmax(d[None], mixed_precision=mixed_precision)[1]
+        pred = trainer.predict_preprocessed_data_return_pred_and_logits(d[None], mixed_precision=mixed_precision)[1]
 
         for p in params[1:]:
             trainer.load_checkpoint_ram(p, False)
-            new_pred = trainer.predict_preprocessed_data_return_pred_and_softmax(d[None], mixed_precision=mixed_precision)[1]
+            new_pred = trainer.predict_preprocessed_data_return_pred_and_logits(d[None], mixed_precision=mixed_precision)[1]
             for it in range(len(pred)):
                 pred = [p + n_p for p, n_p in zip(pred, new_pred)]
 

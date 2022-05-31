@@ -23,7 +23,7 @@ def save_output(pred_categorical: List[np.ndarray],
                 properties_dict: dict):
     if pred_softmax_npz_fname is not None:
         np.savez_compressed(pred_softmax_npz_fname,
-                            softmax=pred_softmax,
+                            logits=pred_softmax,
                             categorical=pred_categorical)
         save_pickle(properties_dict, pred_softmax_npz_fname[:-4] + ".pkl")
 
