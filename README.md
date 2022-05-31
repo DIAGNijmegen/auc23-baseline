@@ -218,7 +218,7 @@ for `$FOLD` in [0, 1, 2, 3, 4].
 Notes:
 - The validation step is not yet implemented. It currently trainer.validate(), but you can still run inference after training 
 - Please make sure to run `uc_train_on_sol.sh` and not `uc_train.sh`! `uc_train.sh` does not first copy the training data to the node on which you are running, so training will be a lot slower. It can slow down I/O for other SOL users as well.
-- See `train.py` for argument options and descriptions.
+- See `uc_train.py` for argument options and descriptions.
 
 <a id="inference"></a>
 ### Inference
@@ -228,14 +228,16 @@ To run inference on SOL, you can run the following command:
 ~/c-submit --require-mem=30g --require-cpus=$NUMCPUS \
     --priority=low luukboulogne 9603 168 \
     doduo1.umcn.nl/universalclassifier/training:latest uc_predict.sh \
+    /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
     -i /path/to/input_images \
     -s /path/to/input_roi_segmentations \
     -o /path/to/output \
-    -t $TASKID
+    -t $TASKID -f 0 1 2 3 4
 ```
 Notes:
 - ! Make sure to remove the `-s /path/to/input_roi_segmentations` if you did not provide input segmentations during training.
 - `/path/to/input_images` should have a flat folder structure (no subdirectories). The filenames in it (and optionally in `/path/to/input_roi_segmentations`) should follow the same format described as [imagesTr](#imagesTr) (and optionally [labelsTr](#labelsTr)).
+- See `uc_predict.py` for argument options and descriptions
 
 
 
