@@ -62,11 +62,8 @@ def corresponding_segmentation_filenames(files):
 def add_empty_segmentation_images_if_missing(image_files):
     segmentation_files = corresponding_segmentation_filenames(image_files)
     seg_files_exist = [Path(s).is_file() for s in segmentation_files]
-    if sum(seg_files_exist) != len(segmentation_files):
-        raise RuntimeError("Some segmentation masks are missing. I will generate empty masks only if all are missing. I "
-                           "will use the masks only if all are present.")
-    for image_file_list, segmentation_file in zip(image_files, segmentation_files):
-        if not Path(segmentation_file).is_file():
+    if sum(seg_files_exist) == 0:  # generate dummy roi files
+        for image_file_list, segmentation_file in zip(image_files, segmentation_files):
             print(f"{segmentation_file} is missing. Automatically generating it with only foreground voxels...")
             image_file = image_file_list[0]
             image_itk = sitk.ReadImage(image_file)
@@ -79,4 +76,10 @@ def add_empty_segmentation_images_if_missing(image_files):
             segm_itk.SetDirection(image_itk.GetDirection())
 
             sitk.WriteImage(segm_itk, str(segmentation_file), True)
+    elif sum(seg_files_exist) != len(segmentation_files):
+        raise RuntimeError(
+            "Some segmentation masks are missing. I will generate empty masks only if all are missing. I "
+            "will use the masks only if all are present.")
+    else:
+        pass  # roi files already in place
 
