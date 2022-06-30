@@ -32,7 +32,7 @@ def add_segmentations_to_dataset_json(dataset_json):
     for it in range(len(tr)):
         if "label" not in tr[it].keys():
             tr[it].update({
-                "label": to_labelsdir_without_modality_identifier(tr[it]['image'])
+                "label": to_corresponding_label_filename(tr[it]['image'])
             })
     if "labels" not in dataset_json.keys():
         dataset_json["labels"] = {
@@ -42,21 +42,27 @@ def add_segmentations_to_dataset_json(dataset_json):
     return dataset_json
 
 
-def to_labelsdir_without_modality_identifier(filename):
-    filename = Path(filename)
-    assert str(filename)[-7:] == '.nii.gz', 'images dir should only contain nii.gz image file'
+def to_corresponding_label_filename(image_filename):
+    image_filename = Path(image_filename)
     suffix = '.nii.gz'
-    imagedir = filename.parent.name
+    assert str(image_filename)[-7:] == suffix, f'images dir should only contain {suffix} image file'
+    imagedir = image_filename.parent.name
+
     assert imagedir in ('imagesTr', 'imagesTs'), 'in_labelstr_without_modality_identifier() is only for converting ' \
                                                  'files in an imagesXX dir to the corresponding files in labelsXX dir '
+    splitted_image_filename = image_filename.stem[-7:].rsplit('_', 1)[2]
+    assert len(splitted_image_filename) == 3, "all image filenames in dataset.json must have format 'NAME_PATIENTID_MODALITYID'"
+    task_identifier, patient_id, modality_id = splitted_image_filename
+    assert patient_id.isnumeric(), "all image filenames in dataset.json must have format 'NAME_PATIENTID_MODALITYID', where PATIENTID is numeric"
+    assert modality_id.isnumeric(), "all image filenames in dataset.json must have format 'NAME_PATIENTID_MODALITYID', where MODALITYID is numeric"
+
     labelsdir = imagedir.replace('image', 'label')
-    taskdir = filename.parent.parent
-    stem = str(Path(filename).stem.rsplit('_', 1)[0])
-    return str(taskdir / labelsdir / (stem+suffix))
+    taskdir = image_filename.parent.parent
+    return str(taskdir / labelsdir / (task_identifier + '_' + patient_id + suffix))
 
 
 def corresponding_segmentation_filenames(files):
-    return [to_labelsdir_without_modality_identifier(f[0]) for f in files]
+    return [to_corresponding_label_filename(f[0]) for f in files]
 
 
 def add_empty_segmentation_images_if_missing(image_files):
