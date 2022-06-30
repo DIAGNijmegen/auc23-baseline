@@ -26,13 +26,15 @@ def add_segmentations_to_task_folder(folder):
         datset_json = add_segmentations_to_dataset_json(dataset_json)
         json.dump(datset_json, fp, indent=2)
 
+def add_dummy_modality(filename):
+    return filename.replace('.nii.gz', '_0000.nii.gz')
 
 def add_segmentations_to_dataset_json(dataset_json):
     tr = dataset_json["training"]
     for it in range(len(tr)):
         if "label" not in tr[it].keys():
             tr[it].update({
-                "label": to_corresponding_label_filename(tr[it]['image'])
+                "label": to_corresponding_label_filename(add_dummy_modality(tr[it]['image']))
             })
     if "labels" not in dataset_json.keys():
         dataset_json["labels"] = {
@@ -50,7 +52,7 @@ def to_corresponding_label_filename(image_filename):
 
     assert imagedir in ('imagesTr', 'imagesTs'), 'in_labelstr_without_modality_identifier() is only for converting ' \
                                                  'files in an imagesXX dir to the corresponding files in labelsXX dir '
-    splitted_image_filename = image_filename.stem[-7:].rsplit('_', 1)[2]
+    splitted_image_filename = image_filename.stem[-7:].rsplit('_', 2)
     assert len(splitted_image_filename) == 3, "all image filenames in dataset.json must have format 'NAME_PATIENTID_MODALITYID'"
     task_identifier, patient_id, modality_id = splitted_image_filename
     assert patient_id.isnumeric(), "all image filenames in dataset.json must have format 'NAME_PATIENTID_MODALITYID', where PATIENTID is numeric"
