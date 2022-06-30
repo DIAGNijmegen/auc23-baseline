@@ -52,7 +52,7 @@ def to_corresponding_label_filename(image_filename):
 
     assert imagedir in ('imagesTr', 'imagesTs'), 'in_labelstr_without_modality_identifier() is only for converting ' \
                                                  'files in an imagesXX dir to the corresponding files in labelsXX dir '
-    splitted_image_filename = image_filename.stem[-7:].rsplit('_', 2)
+    splitted_image_filename = image_filename.name[:-len(suffix)].rsplit('_', 2)
     assert len(splitted_image_filename) == 3, "all image filenames in dataset.json must have format 'NAME_PATIENTID_MODALITYID'"
     task_identifier, patient_id, modality_id = splitted_image_filename
     assert patient_id.isnumeric(), "all image filenames in dataset.json must have format 'NAME_PATIENTID_MODALITYID', where PATIENTID is numeric"
