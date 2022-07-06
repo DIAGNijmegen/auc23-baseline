@@ -22,7 +22,7 @@ The format and instructions below are largely copied from the format and instruc
 
 The entry point to universal classifier is the `raw_data_base/` folder. 
 
-*DIAG specific: On Chansey, the `nnUNet_raw_data_base/` folder for for the universal classifier datasets is found here: `/mnt/netcache/bodyct/experiments/universal_classifier_t9603/data/raw/`. Please use this directory for storing your experiment data.*
+*DIAG specific: On Chansey, the `nnUNet_raw_data/` folder for the universal classifier datasets is found here: `/mnt/netcache/bodyct/experiments/universal_classifier_t9603/data/raw/`. Please use this directory for storing your experiment data.*
 
 Each classification dataset is stored here as a separate 'Task'. Tasks are associated with a task ID, a three digit integer (this is different from the MSD!) and a task name (which you can freely choose): Task010_PancreaticCancer has 'PancreaticCancer' as task name and the task id is 10. Tasks are stored in the `raw_data_base/nnUnet_raw_data/` folder like this:
  
