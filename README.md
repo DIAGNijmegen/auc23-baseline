@@ -166,14 +166,14 @@ Example:
     {
       "image":"./imagesTr/covid19severity_0003.nii.gz",
       "COVID-19": 1, 
-      "Severe COVID-19": 0
+      "Severe COVID-19": 0,
       "label":"./labelsTr/covid19severity_0003.nii.gz",
     },
     ...
     {
       "image":"./imagesTr/covid19severity_8192.nii.gz",
       "COVID-19": 1, 
-      "Severe COVID-19": 0
+      "Severe COVID-19": 0,
       "label":"./labelsTr/covid19severity_8192.nii.gz",
     }
   ],
