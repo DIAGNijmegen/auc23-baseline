@@ -201,6 +201,7 @@ Notes:
 - For most datasets, 30G of RAM should be enough.
 - `$TASKID` is the integer identifier associated with your Task name Task`$TASKID`_MYTASK. You can pass several task IDs at once.
 - See `uc_plan_and_preprocess.py` for argument options and descriptions.
+- Don't use too many CPUs ($NUMCPUS), or you will run out or RAM. It's recommended to use 4 CPUs.
 
 <a id="training"></a>
 ### Training
