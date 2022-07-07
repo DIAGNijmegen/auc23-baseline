@@ -1,6 +1,6 @@
 # Training Example 
 
-This repo contains preprocessing, training, and inference code for a universal 3D classifier (UC). It is heavily based on the [nnUnet](https://github.com/MIC-DKFZ/nnUNet) code base. More specifically, to make it work on SOL (the cluster at DIAG), it's based [DIAG's nnUnet fork](https://github.com/DIAGNijmegen/nnunet). It furthermore uses the [I3D model](https://github.com/hassony2/kinetics_i3d_pytorch). 
+This repo contains preprocessing, training, and inference code for a universal 3D classifier (UC). It is heavily based on the [nnUnet](https://github.com/MIC-DKFZ/nnUNet) code base. More specifically, to make it work on SOL (the cluster at DIAG), it's based on [DIAG's nnUnet fork](https://github.com/DIAGNijmegen/nnunet). It furthermore uses the [I3D model](https://github.com/hassony2/kinetics_i3d_pytorch). 
 
 Feel free to join the discussion about this codebase in the [Universal 3D Classifier channel on Teams](https://teams.microsoft.com/l/channel/19%3a7c2d62ff6c4a4d3c9d7a8b9e2d857571%40thread.tacv2/Universal%25203D%2520classifier?groupId=97a88c45-447f-4147-9e80-5e7c013f7501&tenantId=b208fe69-471e-48c4-8d87-025e9b9a157f).
 
@@ -69,7 +69,7 @@ Task004_ProstateCancer/
 ```
 
 <a id="labelsTr"></a>
-### labelsTs:
+### labelsTr:
 The universal classifier optionally receives segmentations of the region of interest (ROI) as additional input. They must contain segmentation maps that contain consecutive integers, starting with 0: 0, 1, 2, 3, ... num_labels. 0 is considered background.
 ```
 Task012_ProstateCancer/
@@ -112,7 +112,7 @@ Note that:
 ### dataset.json:
 An example of a `dataset.json` is given below. Please note the following: 
 - The modalities listed under "modality" should correspond to the modality identifier as described in [imagesTr](#imagesTr).
-- "classification_labels" is a description of the reference. Each classification label must have consecutive integer values. If multiple classification labels are given, the classifier will be trained on all of them jointly to produce multiple outputs. The "ordinal", field is currently not yet used.
+- "classification_labels" is a description of the reference. Each classification label must have consecutive integer values. If multiple classification labels are given, the classifier will be trained on all of them jointly to produce multiple outputs. The "ordinal" field is currently not yet used.
 - "labels" describes the region of interest (ROI) segmentation map input. This field is optional: when no ROI segmentations are provided with your dataset, please do not add the "labels" field. In this case, the universal classifier will generate empty ROI segmentation masks (only foreground) to use, and it will automatically add the "labels" field for these masks. 
 - "training" describes the training dataset. Please leave out the modality identifier when specifying the paths for the training images. For each training case, each of the reference labels in "classification_labels" must also be specified. This "label" field is optional: when no segmentations are provided with your dataset, please do not add the "label" subfield to any of the training cases. In this case, the universal classifier will generate empty ROI segmentation masks (only foreground) to use, and it will add the paths to these images in the dataset.json.
 - "test" is currently unused.
