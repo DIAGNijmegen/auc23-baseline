@@ -19,5 +19,5 @@ export nnUNet_preprocessed="$1/preprocessed"
 export RESULTS_FOLDER="$1/trained_models"
 #export nnUNet_n_proc_DA=4
 
-echo running "python3 uc_train.py ${@:2}"
-python3 uc_train.py ${@:2}
+echo running "python3 -u uc_train.py ${@:2}"
+python3 -u uc_train.py ${@:2}
