@@ -104,7 +104,14 @@ def main(args):
         # we need to figure out if we need the intensity propoerties. We collect them only if one of the modalities is CT
         dataset_json = load_json(join(cropped_out_dir, 'dataset.json'))
         modalities = list(dataset_json["modality"].values())
-        collect_intensityproperties = True if (("CT" in modalities) or ("ct" in modalities)) else False
+        collect_intensityproperties = True if (
+                ("CT" in modalities) or
+                ("ct" in modalities) or
+                ("ADC MRI" in modalities) or
+                ("ADC" in modalities) or
+                ("adc mri" in modalities) or
+                ("adc" in modalities)
+        ) else False
         dataset_analyzer = ClassificationDatasetAnalyzer(cropped_out_dir, overwrite=False, num_processes=tf)  # this class creates the fingerprint
         print("Analyzing data...", flush=True)
         _ = dataset_analyzer.analyze_dataset(collect_intensityproperties)  # this will write output files that will be used by the ExperimentPlanner

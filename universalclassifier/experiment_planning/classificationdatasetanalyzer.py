@@ -16,11 +16,11 @@ class ClassificationDatasetAnalyzer(DatasetAnalyzer):
 
         voxels_in_dataset = np.sum([np.product(s) for s in self.sizes])
         stride = int(np.ceil(voxels_in_dataset / nr_voxels_upper_bound))
-        stride = max(10, stride)
+        stride = max(10, stride) # Debugging
         voxels = list(modality[mask][::stride])  # no need to take every voxel. edit: Changed 10 to stride
+        print(f"Collected foreground voxels for {patient_identifier}")
         return voxels
 
-    # added max_dimensions for padding later, _get_voxels_in_foreground is not used currently
     def analyze_dataset(self, collect_intensityproperties=True):
         # get all spacings and sizes
         self.sizes, self.spacings = self.get_sizes_and_spacings_after_cropping()
@@ -43,6 +43,8 @@ class ClassificationDatasetAnalyzer(DatasetAnalyzer):
             intensityproperties = self.collect_intensity_properties(len(modalities))
         else:
             intensityproperties = None
+
+        print("intensity properties collected.")
 
         # size reduction by cropping
         size_reductions = self.get_size_reduction_by_cropping()
