@@ -190,15 +190,14 @@ Running consists of three steps: [preprocessing and experiment planning](#prepro
 ### Preprocessing and experiment planning
 To run preprocessing on SOL, you can run the following command:
 ```
-~/c-submit --require-mem=30g --require-cpus=$NUMCPUS \
+~/c-submit --require-mem=60g --require-cpus=$NUMCPUS \
     --priority=low luukboulogne 9603 168 \
     doduo1.umcn.nl/universalclassifier/training:latest uc_plan_and_preprocess.sh \
     /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
     -t $TASKID -tf $NUMCPUS -tl $NUMCPUS
 ```
 Notes:
-- For most datasets, preprocessing should finish within 12 hours.
-- For most datasets, 30G of RAM should be enough.
+- For most datasets used for nnUnet, 60G of RAM should be enough.
 - `$TASKID` is the integer identifier associated with your Task name Task`$TASKID`_MYTASK. You can pass several task IDs at once.
 - See `uc_plan_and_preprocess.py` for argument options and descriptions.
 - Don't use too many CPUs ($NUMCPUS), or you will run out or RAM. It's recommended to use 4 CPUs.
