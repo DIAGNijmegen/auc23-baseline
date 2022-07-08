@@ -16,6 +16,7 @@ class ClassificationDatasetAnalyzer(DatasetAnalyzer):
 
         voxels_in_dataset = np.sum([np.product(s) for s in self.sizes])
         stride = int(np.ceil(voxels_in_dataset / nr_voxels_upper_bound))
+        stride = max(10, stride)
         voxels = list(modality[mask][::stride])  # no need to take every voxel. edit: Changed 10 to stride
         return voxels
 
