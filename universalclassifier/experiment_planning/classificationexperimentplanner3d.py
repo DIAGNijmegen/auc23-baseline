@@ -26,6 +26,7 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
 
         # TODO: work out how memory scales with image size. Naively assuming the same nr of voxels results in the same
         #  memory consumption now
+        max_shape = [np.ceil(s).astype(np.int) for s in max_shape]
         voxels = np.product(max_shape)
         voxels_limit = np.product(self.max_shape_limit)
         ratio = np.cbrt(voxels_limit / voxels)  # cube root because of scaling in each dimension
@@ -42,7 +43,7 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
         #  with a size of max_shape_limit for now. May not work.
         batch_size = np.max([
             self.minimum_batch_size,
-            np.floor(self.minimum_batch_size * ratio).astype(int)
+            np.floor(self.minimum_batch_size * ratio).astype(np.int)
         ])
 
         do_dummy_2D_data_aug = (max(max_shape) / max_shape[0]) > self.anisotropy_threshold
