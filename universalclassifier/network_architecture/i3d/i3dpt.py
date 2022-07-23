@@ -276,7 +276,9 @@ class I3D(torch.nn.Module):
         self.mixed_5b = Mixed(832, [256, 160, 320, 32, 128, 128])
         self.mixed_5c = Mixed(832, [384, 192, 384, 48, 128, 128])
 
-        self.avg_pool = torch.nn.AvgPool3d((2, 7, 7), (1, 1, 1))
+        self.avg_pool_kernel_shape = (2, 2, 7)
+        #self.avg_pool = torch.nn.AvgPool3d(self.avg_pool_kernel_shape, (1, 1, 1))
+
         self.dropout = torch.nn.Dropout(dropout_prob)
 
         # set original final layer to original 400 classes
@@ -312,10 +314,15 @@ class I3D(torch.nn.Module):
         out = self.mixed_4d(out)
         out = self.mixed_4e(out)
         out = self.mixed_4f(out)
+        out = self.mixed_4f(out)
         out = self.maxPool3d_5a_2x2(out)
         out = self.mixed_5b(out)
         out = self.mixed_5c(out)
-        out = self.avg_pool(out)
+
+        avg_pool_shape = (min(s1, s2) for s1, s2 in zip(out.shape[-3:], self.avg_pool_kernel_shape))
+        avg_pool = torch.nn.AgvPool3d(avg_pool_shape, (1, 1, 1))
+
+        out = avg_pool(out)
         out = self.dropout(out)
 
         out = out.mean(dim=[2, 3, 4])
