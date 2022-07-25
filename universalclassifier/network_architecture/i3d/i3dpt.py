@@ -317,9 +317,8 @@ class I3D(torch.nn.Module):
         out = self.maxPool3d_5a_2x2(out)
         out = self.mixed_5b(out)
         out = self.mixed_5c(out)
-
-        avg_pool_shape = (min(s1, s2) for s1, s2 in zip(out.shape[-3:], self.avg_pool_kernel_shape))
-        avg_pool = torch.nn.AgvPool3d(avg_pool_shape, (1, 1, 1))
+        shape1, shape2, shape3 = tuple(min(s1, s2) for s1, s2 in zip(out.shape[-3:], self.avg_pool_kernel_shape))
+        avg_pool = torch.nn.AvgPool3d((shape1, shape2, shape3), (1, 1, 1))
 
         out = avg_pool(out)
         out = self.dropout(out)
