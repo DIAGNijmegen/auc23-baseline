@@ -314,7 +314,6 @@ class I3D(torch.nn.Module):
         out = self.mixed_4d(out)
         out = self.mixed_4e(out)
         out = self.mixed_4f(out)
-        out = self.mixed_4f(out)
         out = self.maxPool3d_5a_2x2(out)
         out = self.mixed_5b(out)
         out = self.mixed_5c(out)
