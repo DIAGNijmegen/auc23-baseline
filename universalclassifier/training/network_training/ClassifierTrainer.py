@@ -12,6 +12,8 @@ from nnunet.training.data_augmentation.default_data_augmentation import default_
 
 from nnunet.utilities.nd_softmax import softmax_helper
 from nnunet.utilities.to_torch import maybe_to_torch, to_cuda
+from scipy.special import softmax
+from sklearn.metrics import accuracy_score, roc_auc_score, roc_curve
 
 import numpy as np
 import torch
@@ -81,12 +83,10 @@ class ClassifierTrainer(NetworkTrainer):
         self.lr_scheduler_patience = 30
         self.weight_decay = 3e-5
 
-        self.max_num_epochs = 200 #1000
+        self.max_num_epochs = 200  # 1000
         self.initial_lr = 1e-2
 
         self.pin_memory = True
-
-
 
     def update_fold(self, fold):
         """
@@ -259,13 +259,15 @@ class ClassifierTrainer(NetworkTrainer):
                                          momentum=0.99, nesterov=True)
         self.lr_scheduler = None
 
-    def validate(self, save_softmax: bool = True, overwrite: bool = True,
-                 validation_folder_name: str = 'validation_raw', debug: bool = False, all_in_gpu: bool = False):
+    def validate(self, overwrite: bool = True, validation_folder_name: str = 'validation_raw'):
         current_mode = self.network.training
         self.network.eval()
 
         assert self.was_initialized, "must initialize, ideally with checkpoint (or train first)"
         if self.dataset_val is None:
+            if self.folder_with_preprocessed_data is None:
+                self.folder_with_preprocessed_data = join(self.dataset_directory, self.plans['data_identifier'] +
+                                                          "_stage%d" % self.stage)
             self.load_dataset()
             self.do_split()
 
@@ -273,30 +275,60 @@ class ClassifierTrainer(NetworkTrainer):
         output_folder = join(self.output_folder, validation_folder_name)
         maybe_mkdir_p(output_folder)
         # this is for debug purposes
-        my_input_args = {'save_softmax': save_softmax,
-                         'overwrite': overwrite,
-                         'validation_folder_name': validation_folder_name,
-                         'debug': debug,
-                         'all_in_gpu': all_in_gpu,
-                         }
+        my_input_args = {'overwrite': overwrite, 'validation_folder_name': validation_folder_name}
         save_json(my_input_args, join(output_folder, "validation_args.json"))
 
+        # save predictions if needed
         for k in self.dataset_val.keys():
-            properties = load_pickle(self.dataset[k]['properties_file'])
-            fname = properties['list_of_data_files'][0].split("/")[-1][:-12]
-            save_fname = join(output_folder, fname + ".npy")
-            if overwrite or (not isfile(join(output_folder, fname + ".nii.gz"))) or \
-                    (save_softmax and not isfile(join(output_folder, fname + ".npz"))):
-                data = np.load(self.dataset[k]['data_file'])['data']
+            save_fname = join(output_folder, k + ".npz")
+            if overwrite or not isfile(save_fname):
+                item = np.load(self.dataset[k]['data_file'])
+                data = item['data']
 
                 data = self.rescale_segmentation_channel(data)
 
-                pred, logits = self.predict_preprocessed_data_return_pred_and_logits(data[None], self.fp16)[1]
+                result = {}
+                result['pred'], result['logits'] = self.predict_preprocessed_data_return_pred_and_logits(data[None],
+                                                                                                         self.fp16)
+                result['out'] = [softmax(x) for x in result['logits']]
+                result.update(self.dataset[k])
+                np.savez(save_fname, **result)
 
-                np.save(save_fname, logits)
+        # load predictions
+        results = []
+        for k in self.dataset_val.keys():
+            save_fname = join(output_folder, k + ".npz")
+            result = np.load(save_fname, allow_pickle=True)
+            results += [result]
+        # convert from list of dicts to dict of np arrays:
+        results = {k: np.asarray([dic[k] for dic in results]) for k in results[0]}
+        results['classification_labels'] = results['classification_labels'][0]
 
-            # TODO: save pred-gt pairs here
-        # TODO: compute performance and save it here
+        # compute performance and save it
+        for label_it, label in enumerate(results['classification_labels']):  # for each label
+            values = results['classification_labels'][label_it]['values']
+            assert set(values.keys()) == set(str(it) for it in range(len(values)))
+            for value in range(len(values)):  # for each value that label can have
+                if len(values) == 2 and value == 0:
+                    continue  # no need to compute the performance twice for binary labels
+                # compute metrics
+                task_targets = results['target'][:, label_it] == value
+                task_preds = results['pred'][:, label_it] == value
+                assert results['out'].shape[2] == 1
+                task_outs = [o[value] for o in results['out'][:, label_it, 0]]
+
+                results["acc"] = accuracy_score(task_targets, task_preds)
+                results["auc"] = roc_auc_score(task_targets, task_outs)
+                results["roc_curve"] = {k: v for k, v in zip(["fpr", "tpr", "thresholds"],
+                                                             roc_curve(task_targets, task_outs))}
+                # print metrics
+                title = f"{label['name']}: {values[str(value)]}"
+                self.print_to_log_file(f"Metrics for {title}")
+                for metric in ["acc", "auc"]:
+                    self.print_to_log_file(f"\t{metric}: {results[metric]}")
+                results_file = join(output_folder, "results.npz")
+                np.savez(results_file, **results)
+                print(f"Saved predictions and performance in {results_file}")
 
         self.network.train(current_mode)
 
@@ -317,13 +349,11 @@ class ClassifierTrainer(NetworkTrainer):
         if torch.cuda.is_available():
             data = to_cuda(data)
 
-        print(data.shape)
         with context():
             with torch.no_grad():
                 ret = [output.cpu().numpy() for output in self.network(data)]
         self.network.train(current_mode)
         return [np.argmax(x) for x in ret], ret
-
 
     def run_iteration(self, data_generator, do_backprop=True, run_online_evaluation=False):
         """
@@ -509,7 +539,7 @@ class ClassifierTrainer(NetworkTrainer):
         super(ClassifierTrainer, self).run_training()
 
     def plot_network_architecture(self):
-        print(type(self.network))
+        self.print_to_log_file(type(self.network))
 
     def save_checkpoint(self, fname, save_optimizer=True):
         super(ClassifierTrainer, self).save_checkpoint(fname, save_optimizer)
@@ -542,7 +572,7 @@ class ClassifierTrainer(NetworkTrainer):
             else:
                 raise RuntimeError("2D preprocessor not implemented")
 
-        print("using preprocessor", preprocessor_name)
+        self.print_to_log_file("using preprocessor", preprocessor_name)
         preprocessor_class = recursive_find_python_class([join(universalclassifier.__path__[0], "preprocessing")],
                                                          preprocessor_name,
                                                          current_module="universalclassifier.preprocessing")
@@ -568,15 +598,16 @@ class ClassifierTrainer(NetworkTrainer):
         :param output_file:
         :return:
         """
-        print(f"Processing {input_files, seg_file}:")
-        print("preprocessing...")
+        self.print_to_log_file(f"Processing {input_files, seg_file}:")
+        self.print_to_log_file("preprocessing...")
         d, s, properties = self.preprocess_patient(input_files, seg_file)
         data = self.combine_data_and_seg(d, s)
-        print("predicting...")
-        categorical_output, pred = self.predict_preprocessed_data_return_pred_and_logits(data[None], self.fp16)[1]  # generates logits output
-        print("exporting prediction...")
+        self.print_to_log_file("predicting...")
+        categorical_output, pred = self.predict_preprocessed_data_return_pred_and_logits(data[None], self.fp16)[
+            1]  # generates logits output
+        self.print_to_log_file("exporting prediction...")
         save_output(categorical_output, pred, output_file, properties)
-        print("done")
+        self.print_to_log_file("done")
 
     def combine_data_and_seg(self, data, seg):
         data = np.vstack((data, seg)).astype(np.float32)

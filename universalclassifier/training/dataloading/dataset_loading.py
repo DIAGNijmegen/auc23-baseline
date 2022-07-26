@@ -10,9 +10,10 @@ def load_dataset(folder_with_preprocessed_data, dataset_directory, cases_key, nu
     metadata = {os.path.basename(case['image']).replace(".nii.gz", ""): case for case in cases}
 
     # we don't load the actual data but instead return the filename to the np file.
-    print('loading dataset')
     case_identifiers = get_case_identifiers(folder_with_preprocessed_data)
     case_identifiers.sort()
+
+    assert set(metadata.keys()) == set(case_identifiers)
 
     dataset = OrderedDict()
     for c in case_identifiers:
