@@ -13,10 +13,8 @@ class ClassifierTrainerBestCheckpoint(ClassifierTrainer):
         self.online_eval_targets = []
 
     def run_online_evaluation(self, outputs, targets):
-        print(f"a: {[o.shape for o in outputs]}, {[t.shape for t in targets]}")
         with torch.no_grad():
             outputs_softmax = [softmax_helper(output) for output in outputs]
-            print("b:", outputs_softmax)
             if len(self.online_eval_outputs_softmax) == 0:
                 assert len(self.online_eval_targets) == 0
                 self.online_eval_outputs_softmax = [output_softmax.detach().cpu().numpy() for output_softmax in
@@ -26,11 +24,11 @@ class ClassifierTrainerBestCheckpoint(ClassifierTrainer):
                 num_outputs = len(outputs)
                 for it in range(num_outputs):
                     self.online_eval_outputs_softmax[it] = np.append(self.online_eval_outputs_softmax[it],
-                                                                     outputs_softmax[it].detach().cpu().numpy())
+                                                                     outputs_softmax[it].detach().cpu().numpy(),
+                                                                     axis=0)
                     self.online_eval_targets[it] = np.append(self.online_eval_targets[it],
-                                                             targets[it].detach().cpu().numpy())
-            print("===== c:", [(len(self.online_eval_outputs_softmax[it]), len(self.online_eval_targets[it]))
-                         for it in range(len(self.online_eval_outputs_softmax[0]))])
+                                                             targets[it].detach().cpu().numpy(),
+                                                             axis=0)
 
     def finish_online_evaluation(self):
         aucs_per_output = []
@@ -42,12 +40,11 @@ class ClassifierTrainerBestCheckpoint(ClassifierTrainer):
                 tgt = target == c
                 auc = roc_auc_score(tgt, out)
                 aucs_per_class.append(auc)
-            print('d:', aucs_per_class)
             aucs_per_output.append(np.mean(aucs_per_class))
 
-        print('e:', aucs_per_output)
         self.all_val_eval_metrics.append(np.mean(aucs_per_output))
         print('f:', len(self.all_val_eval_metrics))
 
         self.online_eval_outputs_softmax = []
         self.online_eval_targets = []
+
