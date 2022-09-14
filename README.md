@@ -147,6 +147,7 @@ Example:
       }
     }
   ],
+  "regression_labels": []
   "labels": {
     "0": "background",
     "1": "left upper lobe",

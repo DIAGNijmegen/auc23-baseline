@@ -29,6 +29,7 @@ from nnunet.paths import *
 
 from universalclassifier.preprocessing import utils
 from universalclassifier.experiment_planning.classificationdatasetanalyzer import ClassificationDatasetAnalyzer
+from universalclassifier.experiment_planning.classificationregressiondatasetanalyzer import ClassificationRegressionDatasetAnalyzer
 import universalclassifier
 import nnunet
 
@@ -111,7 +112,7 @@ def main(args):
                 ("adc mri" in modalities) or
                 ("adc" in modalities)
         ) else False
-        dataset_analyzer = ClassificationDatasetAnalyzer(cropped_out_dir, overwrite=False, num_processes=tf)  # this class creates the fingerprint
+        dataset_analyzer = ClassificationRegressionDatasetAnalyzer(cropped_out_dir, overwrite=False, num_processes=tf)  # this class creates the fingerprint
         print("Analyzing data...", flush=True)
         _ = dataset_analyzer.analyze_dataset(collect_intensityproperties)  # this will write output files that will be used by the ExperimentPlanner
 

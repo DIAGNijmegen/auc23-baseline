@@ -10,7 +10,7 @@ def parse_args():
                              " experiment planning and preprocessing for. Each of these "
                              "ids must, have a matching folder 'TaskXXX_' in the raw "
                              "data folder")
-    parser.add_argument("-pl3d", "--planner3d", type=str, default="ClassificationExperimentPlanner3D",
+    parser.add_argument("-pl3d", "--planner3d", type=str, default="ClassificationRegressionExperimentPlanner3D",
                         help="Name of the ExperimentPlanner class. Default is ClassificationExperimentPlanner3D.")
     parser.add_argument("-pl2d", "--planner2d", type=str, default="None",
                         help="Not implemented")
