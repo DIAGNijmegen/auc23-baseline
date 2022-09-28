@@ -2,7 +2,7 @@
 import torch.nn as nn
 import torch
 
-import universalclassifier.network_architecture.bagnet.xdlayers as xd
+import architecture.xdlayers as xd
 
 import os
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -14,7 +14,7 @@ model_urls = {
             'bagnet17': 'https://bitbucket.org/wielandbrendel/bag-of-feature-pretrained-models/raw/249e8fa82c0913623a807d9d35eeab9da7dcc2a8/bagnet16-105524de.pth.tar',
             'bagnet33': 'https://bitbucket.org/wielandbrendel/bag-of-feature-pretrained-models/raw/249e8fa82c0913623a807d9d35eeab9da7dcc2a8/bagnet32-2ddd53ed.pth.tar',
 }
-
+import numpy as np
 
 def emulate_conv_with_k3(image, dims):
     if dims == 1:
@@ -46,7 +46,7 @@ class Bottleneck(nn.Module):
             slices = (slice(None),)*2 + tuple([slice(None,-diff) for diff in diffs])
             residual = residual[slices]
         out += residual
-        return out 
+        return out
 
     def forward(self, x, **kwargs):
         residual = x
@@ -127,6 +127,13 @@ class BagNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        # pad x to min shape
+        minshape = np.asarray([33, 33, 33])
+        imshape = x.shape[2:]
+        to_pad = np.repeat(minshape - imshape, 2)[::-1]
+        to_pad[to_pad < 0] = 0
+        nn.functional.pad(x, to_pad, "constant", 0)
+
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.bn1(x)
