@@ -111,7 +111,7 @@ Note that:
 <a id="dataset.json"></a>
 ### dataset.json:
 An example of a `dataset.json` is given below. Please note the following: 
-- **The modality identifier is used in the actual image filenames [see imagesTr](#imagesTr) , but not in the filenames in `dataset.json`.**  
+- **The modality identifier is used in the actual image filenames ([see imagesTr](#imagesTr)) , but not in the filenames in `dataset.json`.**  
 - The modalities listed under "modality" should correspond to the modality identifiers as described in [imagesTr](#imagesTr).
 - "classification_labels" is a description of the reference. Each classification label must have consecutive integer values. If multiple classification labels are given, the classifier will be trained on all of them jointly to produce multiple outputs. The "ordinal" field is currently not yet used.
 - "labels" describes the region of interest (ROI) segmentation map input. This field is optional: when no ROI segmentations are provided with your dataset, please do not add the "labels" field. In this case, the universal classifier will generate empty ROI segmentation masks (only foreground) to use, and it will automatically add the "labels" field for these masks. 
