@@ -49,8 +49,8 @@ def add_segmentations_to_task_folder(folder):
 def empty_segmentations_should_be_added(dataset_json, image_files):
     tr = dataset_json["training"]
 
-    items_have_segmentations = ["label" not in tr[it].keys() for it in range(len(tr))]
-    if (not all(items_have_segmentations)) and any(items_have_segmentations):
+    items_dont_have_segmentations = ["label" not in tr[it].keys() for it in range(len(tr))]
+    if (not all(items_dont_have_segmentations)) and any(items_dont_have_segmentations):
         raise RuntimeError("In dataset.json, only some segmentation masks are specified. "
                            "Either all or none must be specified")
 
@@ -62,8 +62,8 @@ def empty_segmentations_should_be_added(dataset_json, image_files):
             "Some segmentation masks are missing. I will generate empty masks only if all are missing. I "
             "will use the masks only if all are present.")
 
-    if sum(seg_files_exist) == 0 or all(items_have_segmentations) or "labels" not in dataset_json.keys():
-        if sum(seg_files_exist) == 0 and all(items_have_segmentations) and "labels" not in dataset_json.keys():
+    if sum(seg_files_exist) == 0 or all(items_dont_have_segmentations) or "labels" not in dataset_json.keys():
+        if sum(seg_files_exist) == 0 and all(items_dont_have_segmentations) and "labels" not in dataset_json.keys():
             return True
         else:
             raise RuntimeError(
