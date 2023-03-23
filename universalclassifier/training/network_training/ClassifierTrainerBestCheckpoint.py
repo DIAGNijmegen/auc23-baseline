@@ -13,8 +13,12 @@ class ClassifierTrainerBestCheckpoint(ClassifierTrainer):
         self.online_eval_targets = []
 
     def run_online_evaluation(self, outputs, targets):
+        print("START run_online_evaluation")
+        print(targets)
+        print(outputs)
         with torch.no_grad():
             outputs_softmax = [softmax_helper(output) for output in outputs]
+            print(outputs_softmax)
             if len(self.online_eval_outputs_softmax) == 0:
                 assert len(self.online_eval_targets) == 0
                 self.online_eval_outputs_softmax = [output_softmax.detach().cpu().numpy() for output_softmax in
@@ -29,6 +33,7 @@ class ClassifierTrainerBestCheckpoint(ClassifierTrainer):
                     self.online_eval_targets[it] = np.append(self.online_eval_targets[it],
                                                              targets[it].detach().cpu().numpy(),
                                                              axis=0)
+        print("END run_online_evaluation")
 
     def finish_online_evaluation(self):
         aucs_per_output = []
@@ -43,7 +48,7 @@ class ClassifierTrainerBestCheckpoint(ClassifierTrainer):
             aucs_per_output.append(np.mean(aucs_per_class))
 
         self.all_val_eval_metrics.append(np.mean(aucs_per_output))
-        print('f:', len(self.all_val_eval_metrics))
+        print('self.all_val_eval_metrcis:', self.all_val_eval_metrics)
 
         self.online_eval_outputs_softmax = []
         self.online_eval_targets = []
