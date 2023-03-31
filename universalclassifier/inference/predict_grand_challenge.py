@@ -1,21 +1,30 @@
 import torch
 from batchgenerators.utilities.file_and_folder_operations import *
 from typing import Tuple, Union, List
+from scipy.special import softmax
 from nnunet.paths import network_training_output_dir
 from universalclassifier.paths import default_plans_identifier, default_trainer
 from universalclassifier.training.model_restore import load_model_and_checkpoint_files
 
 
-def predict_grand_challenge(model: str,
-                            task_name: str,
+def predict_grand_challenge(artifact_path: str,
                             ordered_image_files: List[str],
                             folds: Union[Tuple[int], List[int]],
                             roi_segmentation_file: str = None,
+                            model: str = "3d_fullres",
                             trainer_class_name: str = default_trainer,
                             plans_identifier: str = default_plans_identifier,
                             disable_mixed_precision: bool = True,
                             checkpoint_name: str = "model_final_checkpoint"):
     mixed_precision = not disable_mixed_precision
+
+    task_path = os.path.join(artifact_path, "nnUNet", "3d_fullres")
+    task_names = os.listdir(task_path)
+    if len(task_names) == 0:
+        raise RuntimeError(f"No artifacts found in {task_path}")
+    if len(task_names) > 1:
+        print(f"Expected artifacts for only one task, but found artifacts for: {task_names}. Please only provide the artifact of a single task to limit the size of the docker container.")
+    task_name = task_names[0]
 
     if not task_name.startswith("Task"):
         raise RuntimeError("task_name should start with 'Task'")
@@ -45,7 +54,7 @@ def predict_grand_challenge(model: str,
     torch.cuda.empty_cache()
 
     print("loading parameters for folds,", folds)
-    trainer, params = load_model_and_checkpoint_files(model, folds, mixed_precision=mixed_precision,
+    trainer, params = load_model_and_checkpoint_files(model_folder_name, folds, mixed_precision=mixed_precision,
                                                       checkpoint_name=checkpoint_name)
 
     print(f"=== Processing {ordered_image_files}, {roi_segmentation_file}:")
@@ -56,14 +65,19 @@ def predict_grand_challenge(model: str,
     print("predicting...")
     trainer.load_checkpoint_ram(params[0], False)
     pred = trainer.predict_preprocessed_data_return_pred_and_logits(d[None], mixed_precision=mixed_precision)[1]
+    pred = [softmax(p) for p in pred]
 
     for p in params[1:]:
         trainer.load_checkpoint_ram(p, False)
         new_pred = trainer.predict_preprocessed_data_return_pred_and_logits(d[None], mixed_precision=mixed_precision)[1]
-        for it in range(len(pred)):
-            pred = [p + n_p for p, n_p in zip(pred, new_pred)]
+        pred = [p + softmax(n_p) for p, n_p in zip(pred, new_pred)]
 
     if len(params) > 1:
         pred = [p / len(params) for p in pred]
+
+    pred = [p[0].tolist() for p in pred]  # remove batch dimension and convert to list for storing as json
+
+    # Binary task outputs need to be stored as the probability of the positive class
+    pred = [p if len(p) > 2 else p[0] for p in pred]
 
     return pred
