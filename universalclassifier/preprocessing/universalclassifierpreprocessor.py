@@ -7,7 +7,7 @@ from nnunet.preprocessing.preprocessing import GenericPreprocessor
 from universalclassifier.preprocessing.cropping import ClassificationImageCropper
 
 def central_pad_data_or_seg(np_image, target_size, outside_val=0):
-    target_size = np.asarray([np_image.shape[0]] + list(target_size), dtype=np.int)
+    target_size = np.asarray([np_image.shape[0]] + list(target_size), dtype=int)
 
     assert len(np_image.shape) == 4, "data must be (c, x, y, z)"
     assert all([s1 <= s2 for s1, s2 in zip(np_image.shape, target_size)]) # only padding, no cropping

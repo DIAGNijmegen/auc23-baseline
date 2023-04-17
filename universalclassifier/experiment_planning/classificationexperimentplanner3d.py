@@ -12,6 +12,7 @@ import numpy as np
 
 import universalclassifier
 
+
 class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
     def __init__(self, folder_with_cropped_data, preprocessed_output_folder):
         super().__init__(folder_with_cropped_data, preprocessed_output_folder)
@@ -26,13 +27,13 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
 
         # TODO: work out how memory scales with image size. Naively assuming the same nr of voxels results in the same
         #  memory consumption now
-        max_shape = [np.ceil(s).astype(np.int) for s in max_shape]
+        max_shape = [np.ceil(s).astype(int) for s in max_shape]
         voxels = np.product(max_shape)
         voxels_limit = np.product(self.max_shape_limit)
         ratio = np.cbrt(voxels_limit / voxels)  # cube root because of scaling in each dimension
 
         if ratio < 1:  # so voxels_limit < voxels
-            max_shape = [np.ceil(s*ratio).astype(np.int) for s in max_shape]
+            max_shape = [np.ceil(s*ratio).astype(int) for s in max_shape]
             current_spacing = [s/ratio for s in original_spacing]
             voxels = np.product(max_shape)
             ratio = voxels_limit / voxels
@@ -43,7 +44,7 @@ class ClassificationExperimentPlanner3D(ExperimentPlanner3D_v21):
         #  with a size of max_shape_limit for now. May not work.
         batch_size = np.max([
             self.minimum_batch_size,
-            np.floor(self.minimum_batch_size * ratio).astype(np.int)
+            np.floor(self.minimum_batch_size * ratio).astype(int)
         ])
 
         do_dummy_2D_data_aug = (max(max_shape) / max_shape[0]) > self.anisotropy_threshold
