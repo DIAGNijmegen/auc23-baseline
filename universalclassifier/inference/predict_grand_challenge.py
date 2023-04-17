@@ -1,22 +1,25 @@
+import os
 import torch
 from batchgenerators.utilities.file_and_folder_operations import *
 from typing import Tuple, Union, List
 from scipy.special import softmax
-from nnunet.paths import network_training_output_dir
 from universalclassifier.paths import default_plans_identifier, default_trainer
 from universalclassifier.training.model_restore import load_model_and_checkpoint_files
 
 
 def predict_grand_challenge(artifact_path: str,
                             ordered_image_files: List[str],
-                            folds: Union[Tuple[int], List[int]],
                             roi_segmentation_file: str = None,
+                            folds: Union[Tuple[int], List[int]] = None,
                             model: str = "3d_fullres",
                             trainer_class_name: str = default_trainer,
                             plans_identifier: str = default_plans_identifier,
                             disable_mixed_precision: bool = True,
                             checkpoint_name: str = "model_final_checkpoint"):
     mixed_precision = not disable_mixed_precision
+
+    if folds is None:
+        folds = ["all"]
 
     task_path = os.path.join(artifact_path, "nnUNet", "3d_fullres")
     task_names = os.listdir(task_path)
@@ -41,7 +44,7 @@ def predict_grand_challenge(artifact_path: str,
     else:
         raise ValueError("Unexpected value for argument folds")
 
-    model_folder_name = join(network_training_output_dir, model, task_name, trainer_class_name + "__" +
+    model_folder_name = join(artifact_path, model, task_name, trainer_class_name + "__" +
                              plans_identifier)
     print("using model stored in ", model_folder_name)
     assert isdir(model_folder_name), "model output folder not found. Expected: %s" % model_folder_name
