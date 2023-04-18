@@ -44,7 +44,7 @@ def predict_grand_challenge(artifact_path: str,
     else:
         raise ValueError("Unexpected value for argument folds")
 
-    model_folder_name = join(artifact_path, model, task_name, trainer_class_name + "__" +
+    model_folder_name = join(artifact_path, "nnUNet", model, task_name, trainer_class_name + "__" +
                              plans_identifier)
     print("using model stored in ", model_folder_name)
     assert isdir(model_folder_name), "model output folder not found. Expected: %s" % model_folder_name
