@@ -304,7 +304,7 @@ We recommend using the `poetry` tool to create your `.whl` file. This section sh
 3. Make sure a `README.md` file exists in the root of your repository.
 4. Make sure to have `poetry` installed. You can do so following these instructions https://python-poetry.org/docs/#installation.
 
-#### Creating the .whl file
+#### Creating the `.whl` file
 1. Go to the root of your codebase and run 
     ```
     poetry init
