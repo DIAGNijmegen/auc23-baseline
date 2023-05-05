@@ -274,3 +274,96 @@ Before doing so, please make sure to first add environment variables for your ra
 <a name="adding"></a>
 ## Adding to the codebase
 Feel free to open an issue on GitHub or start a pull request. Also, feel free to join our disussions about this codebase in the [Universal 3D Classifier channel on Teams](https://teams.microsoft.com/l/channel/19%3a7c2d62ff6c4a4d3c9d7a8b9e2d857571%40thread.tacv2/Universal%25203D%2520classifier?groupId=97a88c45-447f-4147-9e80-5e7c013f7501&tenantId=b208fe69-471e-48c4-8d87-025e9b9a157f).
+
+# Documentation for the AUC23 challenge
+
+## Submitting your Algorithm to a Leaderboard
+After you have trained your solution for one of the tasks of AUC23, you can make a submission to the corresponding task-specific Leaderboard on [auc23.grand-challenge.org](auc23.grand-challenge.org). To make a submission, follow the link below corresponding to the Leaderboard that you want to submit to:
+```
+TODO: Insert tutorial links
+```
+
+These urls each link to a task-specific GitHub repository containing a tutorial that describes how to create an Algorithm submission on grand-challenge to the corresponding Leaderboard. Note that the tutorials in these task-specific GitHub repositories are all identical. The GitHub repositories nevertheless differ from each other: They contain different configuration files to account for the different input and output types of each task, and they each contain trained baseline solution weights for different tasks. 
+
+As a prerequisite, these tutorials require you to have created a pip installable `.whl` file from your solution codebase. We recommend to first create a `.whl` file for the AUC23 baseline that this repository contains. The rest of this section explains how to create this `.whl` file.
+
+
+###  Creating an installable `.whl` your solution codebase 
+To submit your codebase as an Algorithm on [auc23.grand-challenge.org](auc23.grand-challenge.org), it is required that you package your codebase in a `.whl` file.
+
+We recommend using the `poetry` tool to create your `.whl` file. This section shows an example of how to create a `.whl` file for the baseline codebase implemented in this template repository. 
+
+#### Prerequisites
+1. Make sure that the root of your codebase contains a directory called `./universalclassifier/` that contains all source code for running training and inference with your Algorithm. This source code should implement a function `predict()` that can be imported from the root of your codebase by running `from universalclassifier import predict`. After you have trained a model, this function will be used to run that model on input images when submitting your Algorithm on [auc23.grand-challenge.org](auc23.grand-challenge.org).
+  
+    The `predict()` function should expect the following arguments: 
+      * `artifact_path: str`: Path to a directory containing the files that describe your trained model.
+      * `ordered_image_files: List[str]`: Ordered list of paths to input image files. This list will follow the same order as the modalities in the `"modality"` field of the `dataset.json` of the corresponding training dataset. 
+      * `roi_segmentation_file: str = None`: Path to the region of interest segmentation file. `None` will be passed if no ROI segmentation file is provided for the task at hand.
+2. Compile a `requirements.txt` file listing all required python packages for your code in  `./universalclassifier/` and place this in the root of your repository.
+3. Make sure a `README.md` file exists in the root of your repository.
+4. Make sure to have `poetry` installed. You can do so following these instructions https://python-poetry.org/docs/#installation.
+
+#### Creating the .whl file
+1. Go to the root of your codebase and run 
+    ```
+    poetry init
+    ```
+    This will ask a few questions to create a basic `pyproject.toml` file in the current directory.
+    Fill in the following:
+
+   - `Package name [directoryname]`: `universalclassifier`
+   - `Version [0.1.0]`: Any version number
+   - `Description []`: Any description
+   - `Author`: Any author
+   - `Licence`: The permissive open source licence for your codebase
+   - `Compatible Python versions`: e.g. `^3.8` for the baseline
+   - `Would you like to define your main dependencies interactively? (yes/no) [yes]`: no
+   - `Would you like to define your development dependencies interactively? (yes/no) [yes]`: no
+   - `Do you confirm generation? (yes/no) [yes]`: yes
+
+    Your directory should now have the following structure:
+    ```
+    ├── universalclassifier/
+    │   ├── # subdirectories and files for the universalclassifier package
+    │   └── 
+    ├── pyproject.toml
+    ├── README.md
+    └── requirements.txt
+   ```
+
+2.  Add requirements by running
+    ```
+    cat requirements.txt | xargs poetry add
+    ```
+    This command reads the package requirements from the `requirements.txt` file and adds them to the `poetry` configuration.
+3.  Run 
+    ```
+    poetry build
+    ```
+    The resulting `.whl` file can be found in the `./dist/` directory created by poetry. You can now use this `.whl` file in your submission. 
+
+
+
+If you later update your codebase, you can update the release number in `pyproject.toml` accordingly and then generate a new `.whl` file for your universal classifier with the following steps:
+
+1. Open the `pyproject.toml` file and update the version number under `[tool.poetry]`:
+    ````
+    [tool.poetry]
+    name = "universalclassifier"
+    version = "X.Y.Z"
+    ...
+    ````
+    Replace `X.Y.Z` with the new version number.
+
+2. Add or update any dependencies in the `pyproject.toml` file, if needed. You can also add dependencies using the command:
+    ```
+    poetry add <package-name>
+    ```
+    Replace `<package-name>` with the name of the package you want to add.
+
+3. Run the following command to build the new `.whl` file:
+    ```
+    poetry build
+    ```
+   The updated `.whl` file will be generated in the `./dist/` directory.
