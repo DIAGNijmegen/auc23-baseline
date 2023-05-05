@@ -81,6 +81,6 @@ def predict_grand_challenge(artifact_path: str,
     pred = [p[0].tolist() for p in pred]  # remove batch dimension and convert to list for storing as json
 
     # Binary task outputs need to be stored as the probability of the positive class
-    pred = [p if len(p) > 2 else p[0] for p in pred]
+    pred = [p if len(p) > 2 else p[1] for p in pred]
 
     return pred
