@@ -1,30 +1,23 @@
-# Training Example 
+# AUC23 baseline
 
-This repo contains preprocessing, training, and inference code for a universal 3D classifier (UC). It is heavily based on the [nnUnet](https://github.com/MIC-DKFZ/nnUNet) code base. More specifically, to make it work on SOL (the cluster at DIAG), it's based on [DIAG's nnUnet fork](https://github.com/DIAGNijmegen/nnunet). It furthermore uses the [I3D model](https://github.com/hassony2/kinetics_i3d_pytorch). 
+This repo contains preprocessing, training, and inference code for a universal 3D medical image classifier. It is heavily based on the [nnUnet](https://github.com/MIC-DKFZ/nnUNet) code base. More specifically, it's based on [the nnUnet fork of the Diagnostic Image Analysis Group](https://github.com/DIAGNijmegen/nnunet). It furthermore uses the [I3D model](https://github.com/hassony2/kinetics_i3d_pytorch).
 
-Feel free to join the discussion about this codebase in the [Universal 3D Classifier channel on Teams](https://teams.microsoft.com/l/channel/19%3a7c2d62ff6c4a4d3c9d7a8b9e2d857571%40thread.tacv2/Universal%25203D%2520classifier?groupId=97a88c45-447f-4147-9e80-5e7c013f7501&tenantId=b208fe69-471e-48c4-8d87-025e9b9a157f).
+If you experience any issues with this codebase, please open an issue on GitHub. 
 
-If you experience any issues with this codebase, please let us know in the [Teams channel](https://teams.microsoft.com/l/channel/19%3a7c2d62ff6c4a4d3c9d7a8b9e2d857571%40thread.tacv2/Universal%25203D%2520classifier?groupId=97a88c45-447f-4147-9e80-5e7c013f7501&tenantId=b208fe69-471e-48c4-8d87-025e9b9a157f) or open an issue on GitHub. 
+This codebase can be used as a template for submitting new universal 3D medical image classification solutions to https://auc23.grand-challenge.org/. This readme contains a [tuturial for submitting to AUC23](#submitting). 
 
 ## Table of Contents
 * [Dataset format](#datasetformat)
-* [How to run on SOL](#howtorunonsol)
-  * [Preprocessing and experiment planning](#preprocessing)
-  * [Training](#training)
-  * [Inference](#inference)
-* [Building, pushing and exporting the Docker container](#buildpushexport)
-* [Running outside of docker](#running-outside-of-docker)
-* [Adding to this codebase](#adding)
+* [Running the codebase](#running-the-codebase)
+* [Submitting to AUC23](#submitting)
 
 <a id="datasetformat"></a>
 ## Dataset format
 The format and instructions below are largely copied from the format and instructions from [nnUnet](https://github.com/MIC-DKFZ/nnUNet/blob/master/nnunet/), which in turn is largely copied from the format used by the [Medical Segmentation Decathlon](http://medicaldecathlon.com/) (MSD):
 
-The entry point to universal classifier is the `raw_data_base/` folder. 
+The entry point to universal classifier is your `/path/to/data/raw` folder.
 
-*DIAG specific: On Chansey, the `nnUNet_raw_data/` folder for the universal classifier datasets is found here: `/mnt/netcache/bodyct/experiments/universal_classifier_t9603/data/raw/`. Please use this directory for storing your experiment data.*
-
-Each classification dataset is stored here as a separate 'Task'. Tasks are associated with a task ID, a three digit integer (this is different from the MSD!) and a task name (which you can freely choose): Task010_PancreaticCancer has 'PancreaticCancer' as task name and the task id is 10. Tasks are stored in the `raw_data_base/nnUnet_raw_data/` folder like this:
+Each classification dataset is stored here as a separate 'Task'. Tasks are associated with a task ID, a three digit integer (this is different from the MSD!) and a task name (which you can freely choose): Task010_PancreaticCancer has 'PancreaticCancer' as task name and the task id is 10. Tasks are stored in the `raw/nnUnet_raw_data/` folder like this:
  
 ```
 nnUNet_raw_data/
@@ -183,18 +176,18 @@ Example:
 ```
 
 
-<a id="howtorunonsol"></a>
-## How to run on SOL
-Running consists of three steps: [preprocessing and experiment planning](#preprocessing), [training](#training), and [inference](#inference).
+
+
+<a name="running-the-codebase"></a>
+## Running preprocessing, training, and inference 
+Running consists of three steps: [preprocessing and experiment planning](#preprocessing), [training](#training), and [inference](#inference). The root folder in which this codebase will operate will be some `/path/to/data/` directory of your choice. Make sure your dataset(s) are stored in `/path/to/data/raw`, as explained in [Dataset format](#datasetformat). Also, make sure the directories `/path/to/data/preprocessed/`, and `/path/to/data/trained_models/` exist.
 
 <a id="preprocessing"></a>
 ### Preprocessing and experiment planning
-To run preprocessing on SOL, you can run the following command:
+To run preprocessing, run the following command:
 ```
-~/c-submit --require-mem=60g --require-cpus=$NUMCPUS \
-    --priority=low luukboulogne 9603 168 \
-    doduo1.umcn.nl/universalclassifier/training:latest uc_plan_and_preprocess.sh \
-    /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
+bash uc_plan_and_preprocess.sh \
+    /path/to/data \
     -t $TASKID -tf $NUMCPUS -tl $NUMCPUS
 ```
 Notes:
@@ -205,31 +198,25 @@ Notes:
 
 <a id="training"></a>
 ### Training
-To run training on SOL, you can run the following command:
+To run training, run the following command:
 ```
-~/c-submit --require-gpu-mem="11G" --gpu-count="1" \
-    --require-mem="30G" --require-cpus="4" \
-    --priority=low luukboulogne 9603 168 \
-    doduo1.umcn.nl/universalclassifier/training:latest uc_train_on_sol.sh \
-    /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
+bash uc_train.sh \
+    /path/to/data \
     3d_fullres ClassifierTrainer $TASKID $FOLD
 ```
 for `$FOLD` in [0, 1, 2, 3, 4].
 
 Notes:
-- Please make sure to run `uc_train_on_sol.sh` and not `uc_train.sh`! `uc_train.sh` does not first copy the training data to the node on which you are running, so training will be a lot slower. It can slow down I/O for other SOL users as well.
 - See `uc_train.py` for argument options and descriptions.
 - If you already trained the fold, but the validation step failed, run the validation step using the --validation_only flag. 
 
 <a id="inference"></a>
 ### Inference
-To run inference on SOL, you can run the following command:
+To run inference, run the following command:
 
 ```
-~/c-submit --require-mem=30g --require-cpus=$NUMCPUS \
-    --priority=low luukboulogne 9603 168 \
-    doduo1.umcn.nl/universalclassifier/training:latest uc_predict.sh \
-    /mnt/netcache/bodyct/experiments/universal_classifier_t9603/data \
+bash uc_predict.sh \
+    /path/to/data \
     -i /path/to/input_images \
     -s /path/to/input_roi_segmentations \
     -o /path/to/output \
@@ -242,56 +229,37 @@ Notes:
 
 
 
-<a id="buildpushexport"></a>
-## Building, pushing, and exporting your training container 
-*DIAG specific: You don't have to build push or export the container to run it on SOL. Instead, you can immediately [run the already pushed version on SOL](#howtorunonsol)*
-
-<a name="building"></a>
-### Building
-To test if your system is set up correctly, you can run
-
-`./build.sh $VERSION`.
-
-This build command is already contained in the scripts for [pushing](#pushing) and [exporting](#exporting).
-
-<a name="pushing"></a>
-### *Pushing (DIAG specific)*
-*Run `./push.sh $VERSION` to build the Docker image and push it to doduo.*
-
-<a name="exporting"></a>
-### Exporting
-Run `export.sh`/`export.bat` to save the Docker image to `./universalclassifier_training_v$VERSION.tar.gz`. This script also includes `build.sh $VERSION`.
-
-
-<a name="running-outside-of-docker"></a>
-## Running outside of docker
-To run the code in this repo outside of docker, you can call  `./uc_plan_and_preprocess.py`, `./uc_train.py`, and `./uc_predict.py` directly. These implement the universalclassifier version of the similarly named nnunet commands. 
+### Running without bash
+To run the code in this repo without bash, you can call  `./uc_plan_and_preprocess.py`, `./uc_train.py`, and `./uc_predict.py` directly. These implement the universalclassifier version of the similarly named nnunet commands. 
 
 Before doing so, please make sure to first add environment variables for your raw data, preprocessed data and results folder. Examples for setting the environment variables can be found in `./uc_plan_and_preprocess.sh`, `./uc_train.sh`, and `./uc_predict.sh`.
 
- See the [original nnUNet documentation](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/setting_up_paths.md) for more details about the environment variables.
- 
-<a name="adding"></a>
-## Adding to the codebase
-Feel free to open an issue on GitHub or start a pull request. Also, feel free to join our disussions about this codebase in the [Universal 3D Classifier channel on Teams](https://teams.microsoft.com/l/channel/19%3a7c2d62ff6c4a4d3c9d7a8b9e2d857571%40thread.tacv2/Universal%25203D%2520classifier?groupId=97a88c45-447f-4147-9e80-5e7c013f7501&tenantId=b208fe69-471e-48c4-8d87-025e9b9a157f).
+See the [original nnUNet documentation](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/setting_up_paths.md) for more details about the environment variables.
 
-# Documentation for the AUC23 challenge
 
-## Submitting your Algorithm to a Leaderboard
+<a name="submitting><\a>
+## Submitting your Algorithm to a Leaderboard for AUC23
+Please read this tutorial before starting to develop your codebase for submission to AUC23.
+
+You can use this codebase as a starting point for submitting your own universal 3D medical image classification solution as an Algorithm on [auc23.grand-challenge.org](auc23.grand-challenge.org). Although you can only submit trained models to the AUC23 challenge, please make sure that it is possible not only to perform inference, but also to perform preprocessing and training as detailed in [Running this codebase without Docker](#rundocker). Please note that, once submitted to grand-challenge.org, your Algorithm will not have access to the internet. Please make sure that e.g. any pre-trained weights do not need to be downloaded at runtime, but are instead pre-downloaded and present in your code base.
+
 After you have trained your solution for one of the tasks of AUC23, you can make a submission to the corresponding task-specific Leaderboard on [auc23.grand-challenge.org](auc23.grand-challenge.org). To make a submission, follow the link below corresponding to the Leaderboard that you want to submit to:
-```
-TODO: Insert tutorial links
-```
+
+- https://github.com/DIAGNijmegen/auc23-t2-algorithm-container-brain-mri-glioma
+- https://github.com/DIAGNijmegen/auc23-t2-algorithm-container-prostate-mri-clinically-significant-cancer
+- https://github.com/DIAGNijmegen/auc23-t2-algorithm-container-lung-nodule-ct-false-positive-reduction
+- https://github.com/DIAGNijmegen/auc23-t2-algorithm-container-rib-ct-fracture
+- https://github.com/DIAGNijmegen/auc23-t2-algorithm-container-breast-mri-molecular-cancer-type
+- https://github.com/DIAGNijmegen/auc23-t2-algorithm-container-retina-oct-glaucoma
+- https://github.com/DIAGNijmegen/auc23-t2-algorithm-container-lung-ct-covid-19
 
 These urls each link to a task-specific GitHub repository containing a tutorial that describes how to create an Algorithm submission on grand-challenge to the corresponding Leaderboard. Note that the tutorials in these task-specific GitHub repositories are all identical. The GitHub repositories nevertheless differ from each other: They contain different configuration files to account for the different input and output types of each task, and they each contain trained baseline solution weights for different tasks. 
 
-As a prerequisite, these tutorials require you to have created a pip installable `.whl` file from your solution codebase. We recommend to first create a `.whl` file for the AUC23 baseline that this repository contains. The rest of this section explains how to create this `.whl` file.
+As a prerequisite, these tutorials require you to have created a pip installable `.whl` file from your solution codebase. We recommend to first create a `.whl` file for the AUC23 baseline that this repository contains to get familiar with this. The rest of this section explains how to create this `.whl` file.
 
 
 ###  Creating an installable `.whl` your solution codebase 
-To submit your codebase as an Algorithm on [auc23.grand-challenge.org](auc23.grand-challenge.org), it is required that you package your codebase in a `.whl` file.
-
-We recommend using the `poetry` tool to create your `.whl` file. This section shows an example of how to create a `.whl` file for the baseline codebase implemented in this template repository. 
+To submit your Algorithm, it is required that you package your codebase in a `.whl` file. We recommend using the `poetry` tool to create your `.whl` file. This section shows an example of how to create a `.whl` file for the baseline codebase implemented in this template repository. 
 
 #### Prerequisites
 1. Make sure that the root of your codebase contains a directory called `./universalclassifier/` that contains all source code for running training and inference with your Algorithm. This source code should implement a function `predict()` that can be imported from the root of your codebase by running `from universalclassifier import predict`. After you have trained a model, this function will be used to run that model on input images when submitting your Algorithm on [auc23.grand-challenge.org](auc23.grand-challenge.org).
@@ -302,7 +270,7 @@ We recommend using the `poetry` tool to create your `.whl` file. This section sh
       * `roi_segmentation_file: str = None`: Path to the region of interest segmentation file. `None` will be passed if no ROI segmentation file is provided for the task at hand.
 2. Compile a `requirements.txt` file listing all required python packages for your code in  `./universalclassifier/` and place this in the root of your repository.
 3. Make sure a `README.md` file exists in the root of your repository.
-4. Make sure to have `poetry` installed. You can do so following these instructions https://python-poetry.org/docs/#installation.
+4. Make sure to have `poetry` installed (or another tool of your choice to build a `.whl` file from your codebase). You can install `poetry` by following these instructions https://python-poetry.org/docs/#installation.
 
 #### Creating the `.whl` file
 1. Go to the root of your codebase and run 
